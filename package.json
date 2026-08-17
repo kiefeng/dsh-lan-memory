@@ -1,0 +1,39 @@
+{
+  "name": "dsh-lan-memory",
+  "version": "1.0.0",
+  "description": "Lan 记忆与人格系统复刻：常驻记忆（pinned）+ 检索记忆（JSONL 关键词检索）+ 经验库 + SOUL/MOOD 人格注入 + 设置页与 mood 卡片。基于《lan-dsh_v1.0_记忆人格复刻手册_20260816.md》实现。",
+  "private": false,
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "docs",
+    "cordis.patch.yml",
+    "README.md",
+    "README.en.md"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6"
+  }
+}

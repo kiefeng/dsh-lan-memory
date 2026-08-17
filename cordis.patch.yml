@@ -1,0 +1,16 @@
+# dsh-lan-memory bundle patch: inserts the lan memory & persona plugin row
+# into the web profile roster. Applied as a profile bundle layer (the
+# `dsh.bundle.patch` manifest field). The node half (exports ".") runs in the
+# host process: memory engine (pinned.md / memory.jsonl / experience.jsonl),
+# the lan_* agent tools, and the SOUL/MOOD prompt sections.
+#
+# 可选：拆两个插件行（可单独卸载）。默认单行；要拆开时把下面两行替换为：
+# - insert:
+#     - id: dsh-lan-memory-memory
+#       name: 'dsh-lan-memory/memory'
+# - insert:
+#     - id: dsh-lan-memory-persona
+#       name: 'dsh-lan-memory/persona'
+- insert:
+    - id: dsh-lan-memory
+      name: 'dsh-lan-memory'
