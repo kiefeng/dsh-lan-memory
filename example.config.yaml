@@ -1,0 +1,6 @@
+# dsh-lan-memory example config
+# 数据目录覆盖（可选）：
+# DSH_LAN_DATA_DIR: /path/to/data
+# 一键整理模型参数（可选）：
+# DSH_LAN_DREAM_MAX_TOKENS: 65536
+# DSH_LAN_STAGE_TIMEOUT_MS: 180000
