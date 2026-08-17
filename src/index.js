@@ -649,7 +649,8 @@ export function apply(ctx) {
           memory: state.memory.length,
           experience: state.experience.length,
           lastMood: state.lastMood,
-          dream: state.dreamState ? `${state.dreamState.lastRunAt} (removed=${state.dreamState.stats.removed})` : null,
+          dream: state.dreamState ? `${state.dreamState.lastRunAt} (pinned=${state.dreamState.stats.after.pinned}, memory=${state.dreamState.stats.after.memory}, experience=${state.dreamState.stats.after.experience})` : null,
+          dreamRunning: state.dreamRunning,
         }
       },
     }),
