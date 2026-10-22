@@ -46,7 +46,7 @@ test('注册 6 工具 / 3 section / 3 context / 1 路由 / 4 事件', (t) => {
     assert.ok(tool.output && typeof tool.output.render === 'function')
   }
   assert.equal(sections.length, 3)
-  assert.equal(contexts.length, 3)
+  assert.equal(contexts.length, 4)
   assert.equal(routes.length, 1)
   assert.equal(routes[0].kind, 'prefix')
   assert.equal(routes[0].path, '/lan-memory')
@@ -79,14 +79,14 @@ test('工具链路：remember → recall → list → forget → status', (t) =>
   assert.equal(status.counts.experience, 1)
 })
 
-test('lan_organize review-pack 返回 ≤4KB 文本', (t) => {
+test('lan_organize compile 在没有模型时保留线索，preview/apply-local 仍可用', async (t) => {
   const { tools } = setup(t)
   const by = Object.fromEntries(tools.map((x) => [x.name, x]))
   by.lan_remember.execute({ content: '用户喜欢深潜' })
   by.lan_remember.execute({ content: '用户喜欢深潜。' })
-  const r = by.lan_organize.execute({ action: 'review-pack' })
-  assert.ok(r.pack.includes('待整理'))
-  assert.ok(Buffer.byteLength(r.pack, 'utf8') <= 4096)
+  const r = await by.lan_organize.execute({ action: 'compile' })
+  assert.ok(r.compile)
+  assert.ok(r.compile.ok === false || r.compile.skipped)
   const preview = by.lan_organize.execute({ action: 'preview' })
   assert.ok(preview.report.actions.length >= 1)
   const applied = by.lan_organize.execute({ action: 'apply-local' })

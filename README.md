@@ -2,11 +2,12 @@
 
 **English** · [中文](#中文)
 
-A lightweight, local-first **memory and persona plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH)**. It gives an agent durable, human-readable file memory, a SOUL/MOOD persona layer, zero-LLM session capture, BM25 recall, a local web panel, and a themed mood card.
+A lightweight, local-first **memory and persona plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH)**. It gives an agent durable, human-readable file memory, a SOUL/MOOD persona layer, zero-LLM session capture, an automatically compiled memory profile (using your configured DSH model), BM25 recall, a local web panel, and a themed mood card.
 
 No Python service, no vector database, no API key, no background LLM extraction. Everything is stored as Markdown/JSONL under `$DSH_HOME/lan-memory` and can be read, edited, backed up and organized by hand.
 
-- **Three memory layers** — `pinned.md` (always injected), `memory.jsonl` (BM25 recall), `experience.jsonl` (lessons learned).
+- **Three memory layers + compiled profile** — `pinned.md` (always injected), `memory.jsonl` (BM25 recall), `experience.jsonl` (lessons), plus automatically compiled `facts.jsonl` → `memory.md`.
+- **Auto-compiled, editable profile** — journal → atomic facts → four sections (`重要事实 / 今天 / 本周 / 长期`); edit `memory.md` in the settings page and the next compile uses it as input.
 - **SOUL / MOOD persona** — editable persona contract, mood status pool, and a themed mood card rendered in the conversation UI.
 - **Six tools** — `lan_remember`, `lan_recall`, `lan_list`, `lan_forget`, `lan_organize`, `lan_status`.
 - **Zero-LLM capture** — each turn is compacted into a local journal; the inbox never enters the system prompt and auto-expires.
@@ -59,10 +60,13 @@ v2 是对 2026-08 原型（v1.0.0）的重写。设计取舍与调研见 [`docs/
 
 ## 特性
 
-- **三层记忆**：`pinned.md`（始终注入）/ `memory.jsonl`（BM25 检索）/ `experience.jsonl`（经验库）
+- **三层记忆 + 自动画像**：`pinned.md`（始终注入）/ `memory.jsonl`（BM25 检索）/ `experience.jsonl`（经验库）；
+  另有自动编译的 `facts.jsonl` → `memory.md`（可编辑）。
+- **自动整理，不用审收件箱**：待编译达到阈值或空闲时，插件用 DSH 现有模型抽取原子事实，合并成
+  「重要事实 / 今天 / 本周 / 长期」四段画像；失败保留线索，不丢内容。
 - **六个工具**：`lan_remember` / `lan_recall` / `lan_list` / `lan_forget` / `lan_organize` / `lan_status`
-- **零 LLM 捕获**：`session/event` → 每轮一条 `journal/YYYY-MM-DD.jsonl`，只做机械去噪；收件箱不进系统提示，只计数字
-- **可管理 / 可修改 / 可整理**：DSH 设置页是原生卡片（概览/快捷操作/状态/开关/最近记忆），完整管理在独立网页面板（5 tab）；整理可干跑、可撤销
+- **零 LLM 捕获**：`session/event` → 每轮一条 `journal/YYYY-MM-DD.jsonl`，只做机械去噪；捕获本身不调模型。
+- **可管理 / 可修改 / 可整理**：DSH 设置页是原生卡片（概览/快捷操作/状态/开关/画像编辑），完整管理在独立网页面板（5 tab）；整理可干跑、可撤销
 - **状态池卡片**：每条回复下方把本轮 `<mood>` 渲染成澜主题卡片（🐋 Vibe / 灵感 / 反思 / 意志），原文自动隐去；数据按 session+turn 精确匹配；状态池按需生成，纯技术任务可省略
 - **反 AI 腔**：SOUL 内置结构/词汇/节奏约束（先答后释、不凑三点、不总结、禁套话），并配「差 → 好」样例；口癖限频，技术结论零口癖
 - **写盘护栏**：原子写 + 上一版 `.bak` + 整理/删除前整份快照（manifest.sha256）+ 单写者锁
@@ -109,8 +113,11 @@ desktop profile 只能在 **Desktop 完全退出后**用自带 CLI 安装：
 lan-memory/
 ├── persona.md              # 人格真源（SOUL + MOOD 契约），可整段手改；整理永不修改它
 ├── pinned.md               # 常驻记忆，Markdown 列表，可手改
-├── memory.jsonl            # 检索记忆
+├── memory.jsonl            # 检索记忆（手动写入）
 ├── experience.jsonl        # 经验库
+├── facts.jsonl             # 自动抽取的原子事实（编译来源）
+├── memory.md               # 四段编译画像（可手改；下一次编译以它为输入）
+├── facts.md / today.md / week.md / longterm.md  # 画像分段中间稿
 ├── mood.jsonl              # 最近 200 条状态池
 ├── journal/YYYY-MM-DD.jsonl# 每轮对话的零 LLM 捕获（30 天滚动）
 ├── journal-status.jsonl    # 已提炼/已忽略的收件箱记录
@@ -133,7 +140,8 @@ lan-memory/
 | MOOD 契约 | `systemPrompt.section` `lan:mood-contract` | 12 KB 安全上限 |
 | 记忆规则 | `systemPrompt.section` `lan:rules` | 固定短文本 |
 | 常驻记忆 | `systemPrompt.context` `lan:pinned` | 4 KB（可配置） |
-| 索引摘要（条数/待整理） | `systemPrompt.context` `lan:index` | 320 B |
+| 编译画像 | `systemPrompt.context` `lan:memory` | 8 KB（可配置） |
+| 索引摘要（条数/待编译） | `systemPrompt.context` `lan:index` | 320 B |
 | 上一轮状态池 | `systemPrompt.context` `lan:mood-last` | 1 KB |
 
 收件箱正文**不进**注入，只给一个计数——这是防止"记忆越攒越贵"的关键。
@@ -142,17 +150,16 @@ lan-memory/
 
 - 捕获：只收用户亲笔消息（`source.kind = user`）与模型可见文本；插件注入的上下文、
   团队消息、子代理消息都不收，避免自我喂养。每轮一条，精确 hash 去重，每日上限 300。
-- 收件箱防积压：待整理只统计最近 14 天、最多 60 条；更老/更多的线索仍留在
-  `journal/*.jsonl`，但不计入徽标、不打扰你。模型看过一轮整理包后，这些线索标记为
-  `reviewed`，不再重复提醒。
-- 整理三条路径：
-  1. **本机整理**（面板按钮 / `lan_organize apply-local`）：纯规则去重合并，秒级、可撤销；
-  2. **整理包**（模型调 `lan_organize review-pack`）：线索先做机械精简（去代码/链接/标题符号），
-     再给出「必须提炼成 1-3 句、≤300 字、禁止整段复制」的写入规则；
-  3. **自动收敛**：journal 超阈值/超龄时本地压缩，只动收件箱不动记忆。
+- 自动编译：journal 达到 `autoCompileThreshold`（默认 6）条或空闲时，插件调用 DSH 现有模型：
+  1. 从对话记录抽取原子事实（一条一事、2-5 个标签、过滤任务/工具/命令/测试/发布细节）；
+  2. 用「当前画像 + 新增事实」重写 `facts.md` / `today.md` / `week.md` / `longterm.md`，
+     拼成 `memory.md`；
+  3. 成功后才把对应 journal 标记为 `compiled`；失败保留待编译，下一次重试。
+- 可编辑：设置页「记忆画像」可直接改 `memory.md` 并保存；下一次编译会把它作为当前画像输入，
+  改前自动备份（`.bak` / undo）。
+- 本地整理仍保留：`lan_organize apply-local` 对 `memory.jsonl` 做确定性去重合并，可撤销。
 - 记忆写入护栏：`lan_remember` 对 memory/experience 单条 ≤300 字、pinned ≤800 字，
   超过或看起来像整段对话/代码会直接拒绝，要求先提炼；这样不会把一大段原文塞进记忆。
-- 按人格契约里的「整理纪律」，模型会每约 10 轮/待整理 ≥20 条时主动整理，日常无需你操作。
 
 ## 安全边界
 
@@ -169,7 +176,8 @@ lan-memory/
 | `DSH_LAN_DATA_DIR` | `$DSH_HOME/lan-memory` | 数据目录 |
 | `DSH_LAN_DEBUG` | 未设 | 设为 `1` 时打印更多日志 |
 
-`meta.json.settings`（面板「维护」可改）：`captureEnabled`、`autoOrganize`、
+`meta.json.settings`（面板「维护」/设置页可改）：`captureEnabled`、`autoCompile`、
+`autoCompileThreshold`、`compileIdleMinutes`、`memoryProvider`、`memoryModel`、`maxFacts`、`maxMemoryBytes`、
 `maxPinnedBytes`、`maxRecallBytes`、`maxIndexBytes`、`maxMoodBytes`、
 `maxEntryChars`、`maxPinnedEntryChars`、`journalPendingDays`、`journalPendingMax`、
 `maxMemory`、`maxExperience`、`journalRetentionDays`、`journalMaxPerDay`、`organizeThreshold`。

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.4.0 — 2026-10-22
+
+自动整理（不再审核收件箱）：
+- 新增编译管线：journal → LLM 抽取原子事实 → `facts.jsonl` → 合并四段画像
+  `facts.md` / `today.md` / `week.md` / `longterm.md` → `memory.md`。
+- 自动触发：待编译达到阈值（默认 6）或空闲时执行；使用 DSH 现有模型（`ctx.llm`），
+  不新增 API Key；失败保留线索并记录错误，成功后才标记 `compiled`。
+- `memory.md` 作为 `lan:memory` 上下文注入；`lan_remember` 写入的事实也会进入事实库。
+- 设置页新增「自动编译」开关、状态/模型/错误、待编译计数，以及可直接编辑保存的「记忆画像」。
+- 新增 HTTP：`POST /api/compile`、`GET/PUT /api/memory-profile`；备份包含 facts/画像文件。
+- `lan_organize` 的 `compile` 动作立即编译；`review-pack` 保留为兼容别名。
+- 自动整理仍只动记忆文件，不改 `persona.md`；编辑/编译前自动备份。
+
 ## 2.3.1 — 2026-10-22
 
 市场展示素材：
