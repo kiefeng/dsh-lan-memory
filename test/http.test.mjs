@@ -179,6 +179,14 @@ test('mood 接口按 session+turn 返回结构化状态池', async (t) => {
   assert.equal(data.mood.session, 's1')
 })
 
+test('mood 接口兼容只有一句 Vibe 的裸文本', async (t) => {
+  const { base, store } = await setup(t)
+  store.recordMood('海面稳住，编译管线接上了。', Date.now(), { session: 's2', turn: 3, seq: 10 })
+  const data = await (await fetch(base + '/lan-memory/api/mood?session=s2&turn=3')).json()
+  assert.equal(data.mood.vibe, '海面稳住，编译管线接上了。')
+  assert.equal(data.mood.text, '海面稳住，编译管线接上了。')
+})
+
 test('export 返回附件 JSON', async (t) => {
   const { base } = await setup(t)
   const r = await fetch(base + '/lan-memory/api/export')
