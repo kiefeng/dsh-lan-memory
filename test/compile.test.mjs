@@ -63,7 +63,10 @@ test('自动编译：抽取事实 → 写 facts/画像 → 标记 compiled', asy
 })
 
 test('编译失败：不标记线索、保留待编译、记录错误', async (t) => {
-  const { store } = makeStore(t)
+  const dir = makeTmp(t, 'compile-fail-')
+  const store = new Store({ dataDir: dir, logger: { log() {}, warn() {}, error() {} } })
+  store.init()
+  store.appendJournal({ id: 'j1', ts: Date.now(), session: 's1', turn: 1, user: '继续', assistant: '好。', tools: [] })
   const llm = {
     listProviders() { return [{ id: 'fake' }] },
     async listModels() { return [{ id: 'fake-model' }] },
@@ -73,9 +76,21 @@ test('编译失败：不标记线索、保留待编译、记录错误', async (t
   const result = await compiler.run({ force: true })
   assert.equal(result.ok, false)
   assert.match(result.error, /network down/)
-  assert.equal(store.pendingJournal().length, 2)
+  assert.equal(store.pendingJournal().length, 1)
   assert.equal(store.facts.length, 0)
   assert.match(store.meta.compile.lastError, /network down/)
+})
+
+test('模型不返回 JSON 时用本地摘要兜底，不丢线索', async (t) => {
+  const { store } = makeStore(t)
+  const llm = fakeLlm(() => '抱歉，我无法按 JSON 输出。')
+  const compiler = createCompiler({ store, llm, logger: { log() {}, warn() {}, error() {} } })
+  const result = await compiler.run({ force: true })
+  assert.equal(result.ok, true)
+  assert.equal(result.fallback, true)
+  assert.ok(result.factsAdded >= 1)
+  assert.equal(store.pendingJournal().length, 0)
+  assert.ok(store.memoryProfile.includes('深潜'))
 })
 
 test('memory.md 可手动编辑，下一次编译作为当前画像输入', (t) => {
