@@ -39,13 +39,14 @@ test('文件清单覆盖运行所需文件', () => {
   }
 })
 
-test('client 半区是 __ModuleLoader__ 手写 bundle 且只注册设置页', () => {
+test('client 半区注册设置页与状态池卡片', () => {
   const client = readFileSync(join(ROOT, 'lib', 'client.js'), 'utf8')
   assert.ok(client.includes('window.__ModuleLoader__.load'))
   assert.ok(client.includes("id: 'dsh-lan-memory'"))
   assert.ok(client.includes("slots.inject('settings.section'"))
-  assert.ok(!client.includes('MutationObserver'), '不应再有 DOM hack')
-  assert.ok(!client.includes('turnTail'), '不应再注册会话卡片')
+  assert.ok(client.includes("slots.inject('conversation.chat.turnTail'"))
+  assert.ok(client.includes("id: 'lan-mood'"))
+  assert.ok(client.includes('/api/mood'), '状态池卡片应从 host 读取结构化 mood')
 })
 
 test('node 半区不 import 任何 DSH 包（避免 v1 的漏依赖问题）', () => {

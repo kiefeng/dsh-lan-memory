@@ -19,6 +19,7 @@ v2 是对 2026-08 原型（v1.0.0）的重写。设计取舍与调研见 [`docs/
 - **六个工具**：`lan_remember` / `lan_recall` / `lan_list` / `lan_forget` / `lan_organize` / `lan_status`
 - **零 LLM 捕获**：`session/event` → 每轮一条 `journal/YYYY-MM-DD.jsonl`，只做机械去噪；收件箱不进系统提示，只计数字
 - **可管理 / 可修改 / 可整理**：本地网页面板五个 tab；设置页有「澜记忆」入口；整理可干跑、可撤销
+- **状态池卡片**：每条回复下方把本轮 `<mood>` 渲染成澜主题卡片（🐋 Vibe / 灵感 / 反思 / 意志），原文自动隐去；数据按 session+turn 精确匹配
 - **写盘护栏**：原子写 + 上一版 `.bak` + 整理/删除前整份快照（manifest.sha256）+ 单写者锁
 - **注入卫生**：`section()` 放常量、`context()` 放读盘内容；全部 `interpolate:false`（记忆里出现 `{{…}}` 不会炸提示词）；字节预算按 UTF-8 实算
 - **兼容性**：`engines.dsh: ^0.2.1-rc.2`；不 import 任何 DSH 包，工具用裸 ToolDefinition 注册

@@ -44,6 +44,9 @@ test('一轮对话落一条 journal，并捕获 mood', (t) => {
   assert.deepEqual(journal[0].tools, ['read'])
   assert.equal(store.moods.length, 1)
   assert.ok(store.moods[0].text.includes('海面微澜'))
+  assert.equal(store.moods[0].session, 'session-1')
+  assert.equal(store.moods[0].turn, 1)
+  assert.equal(store.findMood({ session: 'session-1', turn: 1 }).ts, store.moods[0].ts)
 })
 
 test('插件注入的 runtime-context 不被捕获', (t) => {

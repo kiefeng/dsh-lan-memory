@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.1.0 — 2026-10-22
+
+### 新增
+
+- **状态池卡片**：`conversation.chat.turnTail` 槽位渲染本轮 `<mood>` 为澜主题卡片
+  （🐋 标题、Vibe 药丸、灵感/反思/意志三栏、可折叠），原始 `<mood>` 文本就地隐藏；
+  卡片数据来自 host 的 `GET /lan-memory/api/mood?session=&turn=`，按 session+turn 精确匹配，
+  不会串轮次。隐藏失败时保留原文，卡片照常显示。
+- mood 记录新增 `session` / `turn` / `seq` 元数据，支持按轮查询；`mood.jsonl` 兼容旧记录。
+
+### 说明
+
+- DSH 当前 Markdown 不执行自定义 HTML/组件（`html` 节点按纯文本渲染），因此采用
+  「turnTail 官方槽位 + 文本节点级隐藏」，而不是往正文里塞 HTML。
+- 卡片显示在每条回复下方（Turn 尾部）；这是官方槽位里最稳的位置，不再做 v1 的消息顶部搬移。
+
 ## 2.0.1 — 2026-10-22
 
 实机安装后的修复：

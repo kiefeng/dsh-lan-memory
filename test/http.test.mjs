@@ -159,6 +159,24 @@ test('整理 preview / apply / undo 与备份列表', async (t) => {
   assert.equal(store.memory.length, 2)
 })
 
+test('mood 接口按 session+turn 返回结构化状态池', async (t) => {
+  const { base, store } = await setup(t)
+  store.recordMood(
+    'Vibe: 海面微澜\nSparks: 鲸歌\n洋流\nReflections: 傲娇自查\nWill: 深潜到底',
+    Date.now(),
+    { session: 's1', turn: 2, seq: 9 },
+  )
+  const res = await fetch(base + '/lan-memory/api/mood?session=s1&turn=2')
+  assert.equal(res.status, 200)
+  const data = await res.json()
+  assert.equal(data.ok, true)
+  assert.equal(data.mood.vibe, '海面微澜')
+  assert.deepEqual(data.mood.sparks, ['鲸歌', '洋流'])
+  assert.deepEqual(data.mood.will, ['深潜到底'])
+  assert.equal(data.mood.turn, 2)
+  assert.equal(data.mood.session, 's1')
+})
+
 test('export 返回附件 JSON', async (t) => {
   const { base } = await setup(t)
   const r = await fetch(base + '/lan-memory/api/export')
