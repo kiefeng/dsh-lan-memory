@@ -44,6 +44,8 @@ test('GET state / panel / health', async (t) => {
   assert.ok(state.dataDir)
   assert.ok(state.counts)
   assert.ok(Array.isArray(state.pinned))
+  assert.ok(String(state.panelUrl || '').startsWith('http://127.0.0.1:'), 'state 必须带真实 HTTP 面板地址')
+  assert.ok(state.panelUrl.endsWith('/lan-memory/'))
   const health = await (await fetch(base + '/lan-memory/api/health')).json()
   assert.equal(health.ok, true)
   assert.equal(health.tools, 6)
