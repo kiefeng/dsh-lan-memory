@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.5.0 — 2026-10-22
+
+记忆管理收口：
+- 每日边界：跨天自动把旧 today 沉淀进 week，再清空 today；不再让“今天”跨天挂着。
+- 自动事实可管理：设置页列出 facts，可新增、编辑、删除；新增 `POST /api/facts`；`lan_list` / `lan_forget` 支持 layer=fact。
+- 编译模型可配置：设置页可填 `memoryProvider` / `memoryModel`，并明确提示自动编译会把 journal/摘要发给该 provider。
+- facts 改动后会调度一次强制重编译，画像以事实库为准更新。
+- 63 项测试通过（新增跨天沉淀测试）。
+
 ## 2.4.7 — 2026-10-22
 
 滚动摘要层：
