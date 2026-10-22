@@ -118,4 +118,5 @@ test('extractMood 解析四字段文本', () => {
   assert.ok(mood.includes('Vibe'))
   assert.ok(!mood.includes('</mood>'))
   assert.equal(extractMood('没有状态池'), '')
+  assert.ok(extractMood('<qing>\nVibe: 旧别名\n</qing>').includes('Vibe'))
 })
