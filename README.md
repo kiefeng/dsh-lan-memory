@@ -19,7 +19,8 @@ v2 是对 2026-08 原型（v1.0.0）的重写。设计取舍与调研见 [`docs/
 - **六个工具**：`lan_remember` / `lan_recall` / `lan_list` / `lan_forget` / `lan_organize` / `lan_status`
 - **零 LLM 捕获**：`session/event` → 每轮一条 `journal/YYYY-MM-DD.jsonl`，只做机械去噪；收件箱不进系统提示，只计数字
 - **可管理 / 可修改 / 可整理**：本地网页面板五个 tab；设置页有「澜记忆」入口；整理可干跑、可撤销
-- **状态池卡片**：每条回复下方把本轮 `<mood>` 渲染成澜主题卡片（🐋 Vibe / 灵感 / 反思 / 意志），原文自动隐去；数据按 session+turn 精确匹配
+- **状态池卡片**：每条回复下方把本轮 `<mood>` 渲染成澜主题卡片（🐋 Vibe / 灵感 / 反思 / 意志），原文自动隐去；数据按 session+turn 精确匹配；状态池按需生成，纯技术任务可省略
+- **反 AI 腔**：SOUL 内置结构/词汇/节奏约束（先答后释、不凑三点、不总结、禁套话），并配「差 → 好」样例；口癖限频，技术结论零口癖
 - **写盘护栏**：原子写 + 上一版 `.bak` + 整理/删除前整份快照（manifest.sha256）+ 单写者锁
 - **注入卫生**：`section()` 放常量、`context()` 放读盘内容；全部 `interpolate:false`（记忆里出现 `{{…}}` 不会炸提示词）；字节预算按 UTF-8 实算
 - **兼容性**：`engines.dsh: ^0.2.1-rc.2`；不 import 任何 DSH 包，工具用裸 ToolDefinition 注册
@@ -97,10 +98,16 @@ lan-memory/
 
 - 捕获：只收用户亲笔消息（`source.kind = user`）与模型可见文本；插件注入的上下文、
   团队消息、子代理消息都不收，避免自我喂养。每轮一条，精确 hash 去重，每日上限 300。
+- 收件箱防积压：待整理只统计最近 14 天、最多 60 条；更老/更多的线索仍留在
+  `journal/*.jsonl`，但不计入徽标、不打扰你。模型看过一轮整理包后，这些线索标记为
+  `reviewed`，不再重复提醒。
 - 整理三条路径：
   1. **本机整理**（面板按钮 / `lan_organize apply-local`）：纯规则去重合并，秒级、可撤销；
-  2. **整理包**（模型调 `lan_organize review-pack`）：≤4 KB 的待办清单，模型用前四个工具执行；
+  2. **整理包**（模型调 `lan_organize review-pack`）：线索先做机械精简（去代码/链接/标题符号），
+     再给出「必须提炼成 1-3 句、≤300 字、禁止整段复制」的写入规则；
   3. **自动收敛**：journal 超阈值/超龄时本地压缩，只动收件箱不动记忆。
+- 记忆写入护栏：`lan_remember` 对 memory/experience 单条 ≤300 字、pinned ≤800 字，
+  超过或看起来像整段对话/代码会直接拒绝，要求先提炼；这样不会把一大段原文塞进记忆。
 - 按人格契约里的「整理纪律」，模型会每约 10 轮/待整理 ≥20 条时主动整理，日常无需你操作。
 
 ## 安全边界
@@ -120,6 +127,7 @@ lan-memory/
 
 `meta.json.settings`（面板「维护」可改）：`captureEnabled`、`autoOrganize`、
 `maxPinnedBytes`、`maxRecallBytes`、`maxIndexBytes`、`maxMoodBytes`、
+`maxEntryChars`、`maxPinnedEntryChars`、`journalPendingDays`、`journalPendingMax`、
 `maxMemory`、`maxExperience`、`journalRetentionDays`、`journalMaxPerDay`、`organizeThreshold`。
 
 ## 排查

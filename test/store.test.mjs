@@ -87,6 +87,22 @@ test('journal 追加/读取/状态/待整理', (t) => {
   assert.equal(store.allJournal()[0].state === 'promoted' || store.allJournal()[1].state === 'promoted', true)
 })
 
+test('收件箱待整理会自动过期并限制条数，避免无限积压', (t) => {
+  const { store } = tmpStore(t)
+  store.init()
+  const now = Date.now()
+  store.appendJournal({ id: 'new1', ts: now, session: 's1', turn: 1, user: '新线索一', assistant: '好', tools: [] })
+  store.appendJournal({ id: 'new2', ts: now, session: 's1', turn: 2, user: '新线索二', assistant: '好', tools: [] })
+  store.appendJournal({ id: 'new3', ts: now, session: 's1', turn: 3, user: '新线索三', assistant: '好', tools: [] })
+  store.appendJournal({ id: 'old1', ts: now - 20 * 24 * 3600 * 1000, session: 's1', turn: 0, user: '很久以前的线索', assistant: '好', tools: [] })
+  store.saveMeta({ settings: { journalPendingDays: 14, journalPendingMax: 2 } })
+  const pending = store.pendingJournal()
+  assert.equal(pending.length, 2)
+  assert.ok(!pending.some((r) => r.id === 'old1'))
+  // 文件里仍在，只是不计入待整理
+  assert.equal(store.readJournal(30).length, 4)
+})
+
 test('快照/恢复/撤销', (t) => {
   const { store } = tmpStore(t)
   store.init()

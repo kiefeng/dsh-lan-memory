@@ -95,6 +95,21 @@ test('lan_organize review-pack 返回 ≤4KB 文本', (t) => {
   assert.ok(undo.undoId)
 })
 
+test('lan_remember 拒绝超长和整段对话，要求先提炼', (t) => {
+  const { tools } = setup(t)
+  const by = Object.fromEntries(tools.map((x) => [x.name, x]))
+  const long = '这是一段很长的原文。'.repeat(60)
+  const rejected = by.lan_remember.execute({ content: long })
+  assert.equal(rejected.ok, false)
+  assert.match(rejected.error, /超过单条上限/)
+  const dialogue = '用户：帮我看看这个\n助手：好的\n用户：那这个呢\n助手：也可以\n用户：还有这个\n助手：可以'
+  const rejected2 = by.lan_remember.execute({ content: dialogue })
+  assert.equal(rejected2.ok, false)
+  assert.match(rejected2.error, /整段对话/)
+  const ok = by.lan_remember.execute({ content: '用户偏好简洁直接的回答。' })
+  assert.equal(ok.ok, true)
+})
+
 test('persona 注入区块使用 interpolate:false', (t) => {
   const { sections, contexts } = setup(t)
   for (const s of [...sections, ...contexts]) assert.equal(s.interpolate, false)
