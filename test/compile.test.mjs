@@ -31,6 +31,7 @@ function fakeLlm(respond) {
 test('自动编译：抽取事实 → 写 facts/画像 → 标记 compiled', async (t) => {
   const { dir, store } = makeStore(t)
   const llm = fakeLlm((prompt) => {
+    if (prompt.includes('摘要器')) return '用户喜欢深潜，偏好先给结论。'
     if (prompt.includes('抽取器')) {
       return JSON.stringify([
         { fact: '用户喜欢深潜', tags: ['兴趣', '深潜'], time: null },
@@ -49,6 +50,7 @@ test('自动编译：抽取事实 → 写 facts/画像 → 标记 compiled', asy
   assert.equal(result.ok, true)
   assert.equal(result.factsAdded, 2)
   assert.equal(store.facts.length, 2)
+  assert.ok(Object.keys(store.summaries || {}).length >= 1)
   assert.equal(store.pendingJournal().length, 0)
   assert.ok(existsSync(join(dir, 'memory.md')))
   assert.ok(readFileSync(join(dir, 'memory.md'), 'utf8').includes('## 重要事实'))
