@@ -37,7 +37,7 @@ function setup(t) {
   return { ...f, dispose, dir }
 }
 
-test('注册 6 工具 / 3 section / 3 context / 1 路由 / 4 事件', (t) => {
+test('注册 6 工具 / 3 section / 4 context / 1 路由 / 4 事件', (t) => {
   const { tools, sections, contexts, routes, events } = setup(t)
   assert.deepEqual(tools.map((x) => x.name).sort(), ['lan_forget', 'lan_list', 'lan_organize', 'lan_recall', 'lan_remember', 'lan_status'])
   for (const tool of tools) {
@@ -46,7 +46,7 @@ test('注册 6 工具 / 3 section / 3 context / 1 路由 / 4 事件', (t) => {
     assert.ok(tool.output && typeof tool.output.render === 'function')
   }
   assert.equal(sections.length, 3)
-  assert.equal(contexts.length, 4)
+  assert.equal(contexts.length, 5)
   assert.equal(routes.length, 1)
   assert.equal(routes[0].kind, 'prefix')
   assert.equal(routes[0].path, '/lan-memory')
@@ -59,6 +59,8 @@ test('工具链路：remember → recall → list → forget → status', (t) =>
   const r1 = by.lan_remember.execute({ content: '用户喜欢深潜', layer: 'memory', tags: ['偏好'] })
   assert.equal(r1.ok, true)
   assert.ok(r1.id)
+  assert.equal(by.lan_status.execute({}).counts.facts, 0, '手动记忆不应自动写成自动事实')
+  assert.equal(by.lan_recall.execute({ query: '深潜', layer: 'fact' }).results.length, 0, 'fact 层不应命中手动记忆')
   const pinned = by.lan_remember.execute({ content: '回答要简洁', layer: 'pinned', tags: ['沟通'] })
   assert.equal(pinned.ok, true)
   const exp = by.lan_remember.execute({ content: '先读再改', layer: 'experience', category: 'tool usage' })
