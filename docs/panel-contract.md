@@ -1,5 +1,8 @@
 # 管理面板对接契约（ui/panel.html）
 
+> **已废弃（v2.8.0）**：独立面板与 `/lan-memory/` 路由已移除，管理统一走 DSH 设置页的标签页。
+> 本文只保留作历史参考；REST API 仍然有效。
+
 面板由 host 插件在 `GET /lan-memory/` 直接返回，同源，无外部依赖、无构建。
 所有请求都相对当前 origin，使用绝对路径 `/lan-memory/api/...`。
 

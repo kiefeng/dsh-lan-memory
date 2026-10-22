@@ -51,7 +51,7 @@ const server = http.createServer((req, res) => {
   const url = req.url || '/'
   if (url === '/' || url === '') {
     res.statusCode = 302
-    res.setHeader('Location', '/lan-memory/')
+    res.setHeader('Location', '/lan-memory/api/state')
     res.end()
     return
   }
@@ -65,7 +65,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(port, '127.0.0.1', () => {
   console.log(`[dev] 插件已加载：${tools.length} 工具 / ${sections.length} section / ${contexts.length} context`)
-  console.log(`[dev] 面板：http://127.0.0.1:${port}/lan-memory/`)
+  console.log(`[dev] API：http://127.0.0.1:${port}/lan-memory/api/state`)
   console.log(`[dev] 数据目录：${dataDir}`)
 })
 

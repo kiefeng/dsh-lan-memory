@@ -34,9 +34,10 @@ test('client 声明只含宿主认识的字段', () => {
 })
 
 test('文件清单覆盖运行所需文件', () => {
-  for (const entry of ['lib', 'ui', 'cordis.patch.yml', 'README.md']) {
+  for (const entry of ['lib', 'cordis.patch.yml', 'README.md']) {
     assert.ok(pkg.files.includes(entry), `files 缺少 ${entry}`)
   }
+  assert.ok(!pkg.files.includes('ui'), '独立面板已移除，files 不应再包含 ui')
 })
 
 test('client 半区注册设置页与状态池卡片', () => {

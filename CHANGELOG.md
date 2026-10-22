@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.1 — 2026-10-22
+
+文档与清理：
+- README 重写：四层规则、摘要→事实→画像、每日边界、事实墓碑、六标签设置页、无独立面板。
+- 删除 `ui/panel.html` 与面板加载代码；`/lan-memory/` 只返回 404，API 保持。
+- 更新 `cordis.patch.yml`、`docs/design.md`、`docs/panel-contract.md` 的过时描述。
+- dev server 根路径改为跳 `api/state`。
+
 ## 2.8.0 — 2026-10-22
 
 管理界面收尾：

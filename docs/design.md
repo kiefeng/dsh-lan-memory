@@ -1,5 +1,8 @@
 # dsh-lan-memory v2 实施计划
 
+> **后续变更（v2.8.0）**：独立面板已移除，管理统一在 DSH 设置页的六个标签页；
+> v2.7.0 起记忆拆为常驻 / 手动记忆 / 自动事实 / 经验四层。本文是早期计划，以 README 与 CHANGELOG 为准。
+>
 > 制定日期：2026-10-22 ｜ 目标宿主：DSH Desktop 0.2.1-rc.2（Node 24.21.0）
 > 前置调研：[评估报告](../dsh-lan-memory-评估报告.md)、[源码审计](01-lan-memory-audit.md)、[竞品横评](02-plugin-landscape.md)、[平台能力](03-platform-capabilities.md)
 > v1 源码：`../dsh-lan-memory-master/`（2026-08-17 最后一次提交）

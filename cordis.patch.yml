@@ -1,11 +1,11 @@
 # dsh-lan-memory bundle patch: inserts the lan memory & persona plugin row
 # into the profile roster. The host half (exports ".") runs in the DSH host
 # process: local file memory engine, the lan_* agent tools, SOUL/MOOD prompt
-# sections, the /lan-memory management panel, and zero-LLM journal capture.
+# sections, auto-compiled profile, and zero-LLM journal capture.
 #
-# The browser half (exports "./client") only adds the "澜记忆" entry to the
-# DSH settings page; the full management UI is served by the host at
-# http://127.0.0.1:<dsh-port>/lan-memory/ and also embedded there.
+# The browser half (exports "./client") adds the "澜记忆" settings page with
+# tabs for overview, memory, experience, inbox, persona and maintenance.
+# There is no standalone /lan-memory panel.
 - insert:
     - id: dsh-lan-memory
       name: 'dsh-lan-memory'
