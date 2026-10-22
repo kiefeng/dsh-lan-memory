@@ -36,7 +36,7 @@ function post(base, path, body, extra = {}) {
   })
 }
 
-test('GET state / panel / health', async (t) => {
+test('GET state / health；旧面板路由已移除', async (t) => {
   const { base } = await setup(t)
   const state = await (await fetch(base + '/lan-memory/api/state')).json()
   assert.equal(state.ok, true)
@@ -44,14 +44,12 @@ test('GET state / panel / health', async (t) => {
   assert.ok(state.dataDir)
   assert.ok(state.counts)
   assert.ok(Array.isArray(state.pinned))
-  assert.ok(String(state.panelUrl || '').startsWith('http://127.0.0.1:'), 'state 必须带真实 HTTP 面板地址')
-  assert.ok(state.panelUrl.endsWith('/lan-memory/'))
+  assert.equal(state.panelUrl, null, 'state 不再暴露面板地址')
   const health = await (await fetch(base + '/lan-memory/api/health')).json()
   assert.equal(health.ok, true)
   assert.equal(health.tools, 6)
   const panel = await fetch(base + '/lan-memory/')
-  assert.equal(panel.status, 200)
-  assert.ok((panel.headers.get('content-type') || '').includes('text/html'))
+  assert.equal(panel.status, 404)
 })
 
 test('写请求缺 x-lan-ui 头被拒绝', async (t) => {

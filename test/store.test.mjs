@@ -66,6 +66,19 @@ test('记忆 CRUD 与 etag 变化', (t) => {
   assert.throws(() => store.deleteMemory('nope'), /未找到/)
 })
 
+test('自动事实删除后加墓碑，编译不会把它写回来', (t) => {
+  const { store } = tmpStore(t)
+  store.init()
+  const first = store.appendFacts([{ fact: '用户喜欢深潜' }])[0]
+  assert.ok(first)
+  store.deleteFact(first.id)
+  assert.equal(store.facts.length, 0)
+  assert.equal(store.appendFacts([{ fact: '用户喜欢深潜。' }]).length, 0)
+  const manual = store.addFact({ fact: '用户喜欢深潜。' })
+  assert.ok(manual, '手动新增应能解除墓碑')
+  assert.equal(store.facts.length, 1)
+})
+
 test('write 后保留 .bak 上一版', (t) => {
   const { store, dir } = tmpStore(t)
   store.init()
