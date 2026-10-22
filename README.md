@@ -14,6 +14,14 @@ No Python service, no vector database, no API key, no background LLM extraction.
 - **Safe writes** — atomic writes, previous-version backups, checksummed snapshots before organize/delete, single-writer lock, undo.
 - **Small and portable** — one host plugin and one browser bundle; no runtime imports of DSH packages except services injected by the host; `engines.dsh: ^0.2.1-rc.2`.
 
+![Mood status card rendered after a reply](docs/images/mood-card.png)
+
+*The mood status card: Vibe, Sparks, Reflections and Will, rendered locally from the turn's `<mood>` block.*
+
+![Native DSH settings page](docs/images/settings-preview.png)
+
+*The native settings page: overview, quick actions, runtime status, automation switches, and recent memories.*
+
 ### Install
 
 Requires DSH Desktop **0.2.1-rc.2** (or another 0.2.x with a Web GUI).
