@@ -1,111 +1,145 @@
-# dsh-lan-memory
+# dsh-lan-memory v2 — 澜 · 轻量本地记忆与人格系统
 
-**[English](README.en.md) | 中文**
+> 个人自用的本地记忆层：文件是唯一真源，零外部服务、零 API Key、零向量库。
+> 三层记忆 + SOUL/MOOD 人格 + 零 LLM 捕获 + 本地管理面板。
 
-**澜 · 记忆与人格系统**（Lan Memory & Persona）—— DeepSeek Harness 的记忆插件：三层记忆（常驻 / 检索 / 经验库）+ SOUL/MOOD 人格注入 + mood 状态池 + 一键整理去重合并。
+v2 是对 2026-08 原型（v1.0.0）的重写。设计取舍与调研见 [`docs/design.md`](docs/design.md) 与 [`docs/panel-contract.md`](docs/panel-contract.md)。
 
-> 设计参考：本插件的记忆分层与整理机制参考了 hanako agent 的记忆系统（复刻机制设计，不搬运任何内容）。规格文档见 [`docs/`](./docs)。
+## 它是什么 / 不是什么
 
----
+**是**：一个跑在 DSH 宿主进程里的轻量插件。记忆存在本机 Markdown / JSONL 文件里，
+你随时能打开看、能手改、能备份、能整理；人格（SOUL）与情绪状态池（MOOD）继续保留。
+
+**不是**：不是通用记忆 OS。不做 Python 服务、MongoDB/Neo4j/Qdrant、embedding、
+外部 LLM 抽取、MCP 桥接。捕获不花一分钱模型调用；整理用当前会话的模型，或纯本地规则。
 
 ## 特性
 
-- **三层记忆**：常驻（pinned，始终注入）、检索（JSONL 关键词检索）、经验库（教训/方法沉淀）
-- **人格系统**：SOUL 静态底稿 + MOOD 输出契约，鲸鱼娘人格，傲娇与严谨双模式
-- **mood 状态池**：每条回复自动带 Vibe / Sparks / Reflections / Will 状态池，GUI 可折叠卡片展示
-- **一键整理**：手动按钮，对三层去重合并，写盘前自动备份
-- **人格可编辑**：GUI 在线修改 SOUL 与 MOOD 契约，保存即生效
-- 纯 JSONL + 关键词检索，零外部数据库，零外部运行时依赖
-
----
-
-## 人格（鲸鱼娘版）
-
-- 助手名：**澜**（Lán），自称平时"我"、傲娇或强调时"本鲸"
-- 核心信条：温柔可以打折，事实不可以
-- 双模式：海面模式（傲娇嘴硬心软，日常）↔ 深潜模式（话少精确直击底层，事实/专业/原则问题自动切换）
-- 傲娇刹车片：语气别扭但行为到位，禁嘲讽、禁真拒绝、禁原则问题傲娇；被戳穿五句内回归正事；情绪低落时傲娇降档关心优先
-- 深潜严谨：结论带依据、区分事实/推断/不确定、关键结论短句；原则严禁时零傲娇
-
-**人格可自行修改**：默认人格内置在代码中；安装后可在 GUI 设置 → Lan → 人格 页在线编辑 SOUL 底稿与 MOOD 输出契约，保存即写入 `~/.dsh/hanako/persona.json`（覆盖默认，下轮生效）。想恢复默认删掉该文件即可。
-
-## mood 状态池
-
-每条 assistant 回复前会产出 `<mood>` 状态池（由 `agent/turn-stopping` 事件捕获，存 `mood.jsonl`），四字段结构化：
-
-- **Vibe**：当下情绪，用海洋状态表达（如"海面微澜""深海无风"）
-- **Sparks**：鲸鱼相关联想（鲸歌、洋流、深潜、浮游生物、迁徙）
-- **Reflections**：对任务的反思与质疑，含一条"傲娇自查"
-- **Will**：此刻的意志/欲求，与嘴上说的相反时如实写（傲娇的诚实出口）
-
-展示位置：每条 assistant 消息下方渲染可折叠的状态池卡片（GUI 设置页可开关）；最近状态池也会回注到下一轮 system prompt 供人格演变参考。
-
-## 记忆能力
-
-| 层 | 载体 | 工具 | 注入 |
-|---|---|---|---|
-| 常驻记忆 | `pinned.md`（`[标签] 内容` 一行一条） | `lan_pin` / `lan_unpin` | 每次组装全量注入 ≤4KB |
-| 检索记忆 | `memory.jsonl`（`{id,tags,content,created_at,updated_at,source}`） | `lan_remember` / `lan_recall` / `lan_forget` / `lan_list` | 模型按需主动调用，单次 ≤2KB |
-| 经验库 | `experience.jsonl`（`{id,category,content,created_at}`） | `lan_exp_record` / `lan_exp_list` / `lan_exp_recall` / `lan_exp_forget` | 模型按需主动调用 |
-
-**GUI**（设置 → Lan，五个标签页）：
-- **常驻记忆 / 检索记忆 / 经验库**：在线查看、增删条目（REST API：`GET/POST/DELETE /api/dsh-lan-memory/memory?layer=…`）
-- **人格**：编辑 SOUL 与 MOOD 契约（`GET/PUT /api/dsh-lan-memory/persona`）
-- **整理**：一键去重合并按钮（`POST /api/dsh-lan-memory/dream`）
-
-工具统一 `lan_` 前缀，自文档化。
-
-## 一键整理（手动去重合并）
-
-仅手动触发（设置页「整理」按钮或 `lan_dream` 工具），点击后对三层逐次去重合并：
-
-- 常驻记忆、检索记忆、经验库各一次模型调用
-- 规则：完全相同行只留一条；语义相同/高度重复的合并为一行（保留全部有效信息）；信息不同的各行保留；不新增来源没有的信息
-- 安全底线：写盘前自动备份（`backups/` 保留 7 份）、元数据继承（tags 并集 / created_at 取最早 / 保留来源）、并发锁 + 调用超时（防挂死）
-
-## 存储位置
-
-- 默认：`~/.dsh/hanako/`（`pinned.md` / `memory.jsonl` / `experience.jsonl` / `mood.jsonl` / `persona.json` / `dream-state.json`）
-- 覆盖：环境变量 `DSH_LAN_DATA_DIR`
-- `persona.json`：`{soul, moodContract}`，插件启动时加载注入，缺省用内置默认人格；GUI 人格页在线编辑
+- **三层记忆**：`pinned.md`（始终注入）/ `memory.jsonl`（BM25 检索）/ `experience.jsonl`（经验库）
+- **六个工具**：`lan_remember` / `lan_recall` / `lan_list` / `lan_forget` / `lan_organize` / `lan_status`
+- **零 LLM 捕获**：`session/event` → 每轮一条 `journal/YYYY-MM-DD.jsonl`，只做机械去噪；收件箱不进系统提示，只计数字
+- **可管理 / 可修改 / 可整理**：本地网页面板五个 tab；设置页有「澜记忆」入口；整理可干跑、可撤销
+- **写盘护栏**：原子写 + 上一版 `.bak` + 整理/删除前整份快照（manifest.sha256）+ 单写者锁
+- **注入卫生**：`section()` 放常量、`context()` 放读盘内容；全部 `interpolate:false`（记忆里出现 `{{…}}` 不会炸提示词）；字节预算按 UTF-8 实算
+- **兼容性**：`engines.dsh: ^0.2.1-rc.2`；不 import 任何 DSH 包，工具用裸 ToolDefinition 注册
 
 ## 安装
 
-```bash
-# 从插件目录安装到 web profile
-dsh plugin --profile web add <插件目录绝对路径>
+要求：DSH Desktop 0.2.1-rc.2（或同 minor 的 0.2.x）。
 
-# 验证已安装
-dsh --profile web --dump-config | grep lan
+### 桌面版（desktop profile）
+
+desktop profile 只能在 **Desktop 完全退出后**用自带 CLI 安装：
+
+```powershell
+# 1. 完全退出 DeepSeek Harness Desktop（托盘也要退）
+# 2. 安装本地目录（<DSH安装目录> 例如 D:\DSH；插件目录是你 clone/解压后的路径）
+& "<DSH安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add "<插件目录>"
+# 3. 重启 Desktop
 ```
 
-## 卸载
+如果 `dsh` 已在 PATH 上，等价命令是 `dsh plugin --profile desktop add "<插件目录>"`。
 
-```bash
-dsh plugin --profile web remove dsh-lan-memory
+装好后：
+
+- 设置页出现「澜记忆」：状态、待整理数、打开面板 / 本机整理 / 立即备份；
+- 管理面板：`http://127.0.0.1:<DSH端口>/lan-memory/`（端口见启动日志或 `DSH_WEB_URL`）；
+- 对话里让助手「记住 X」「查一下我之前说过的 Y」「整理记忆」即可。
+
+### 其他 profile（开发/验证）
+
+```powershell
+& "<DSH安装目录>\resources\runtime\cli\bin\dsh.cmd" plugin --profile lan-test add "<插件目录>"
+& "<DSH安装目录>\resources\runtime\cli\bin\dsh.cmd" --profile lan-test --dump-config
 ```
 
-数据文件保留在 `~/.dsh/hanako/`，卸载不删除。
+## 数据
 
-## 快速验证
-
-1. **常驻跨会话**：会话 A 中 `lan_pin("用户偏好", "喜欢美式咖啡")` → 新开会话 B，系统提示常驻区块出现该条目。
-2. **检索跨会话**：会话 A 中 `lan_remember("用户是医学总监，关注肠内营养", ["用户偏好"])` → 会话 B 提问相关话题，模型主动调用 `lan_recall` 并引用。
-3. **人格稳定**：新会话连续问同样问题两次，回答风格一致（SOUL 恒定注入）。
-4. **状态池**：每条回复前有 `<mood>` 状态池（输出契约 + turn-stopping 捕获回注）。
-
-## 文件结构
+默认目录：`$DSH_HOME/lan-memory/`（本机通常是 `C:\Users\<你>\.dsh\lan-memory`），
+可用环境变量 `DSH_LAN_DATA_DIR` 覆盖。
 
 ```
-dsh-lan-memory/
-├── package.json          # dsh.bundle.patch 声明 + client 入口
-├── cordis.patch.yml      # 插件行插入
-├── src/index.js          # 宿主插件实现（存储 + 工具 + 注入 + MOOD 捕获 + 一键整理 + REST API）
-├── src/client.js         # 设置页多标签 UI（记忆/人格/mood/整理）
-├── docs/                 # 设计规格文档
-└── README.md
+lan-memory/
+├── persona.md              # 人格真源（SOUL + MOOD 契约），可整段手改；整理永不修改它
+├── pinned.md               # 常驻记忆，Markdown 列表，可手改
+├── memory.jsonl            # 检索记忆
+├── experience.jsonl        # 经验库
+├── mood.jsonl              # 最近 200 条状态池
+├── journal/YYYY-MM-DD.jsonl# 每轮对话的零 LLM 捕获（30 天滚动）
+├── journal-status.jsonl    # 已提炼/已忽略的收件箱记录
+├── views/memory.md         # 派生只读视图（可删、自动重建）
+├── backups/<ts>_<reason>/  # 整份快照 + manifest.sha256
+├── undo/<ts>/              # 最近 10 次整理/删除前的内容
+├── meta.json               # schemaVersion / settings / 最近整理
+└── .lock                   # 单写者锁
 ```
 
-## 许可
+**迁移 v1**：首次启动若发现 `$DSH_HOME/hanako/` 且新目录为空，会**复制不移动**地导入
+`pinned.md` / `memory.jsonl` / `experience.jsonl` / `mood.jsonl` / `persona.json`（转成 `persona.md`），
+并先做一份 `pre-migrate-v1` 快照。旧目录保持原样，可随时回退。
+
+## 注入与预算
+
+| 内容 | 通道 | 预算 |
+|---|---|---|
+| SOUL | `systemPrompt.section` `lan:persona` | 12 KB 安全上限 |
+| MOOD 契约 | `systemPrompt.section` `lan:mood-contract` | 12 KB 安全上限 |
+| 记忆规则 | `systemPrompt.section` `lan:rules` | 固定短文本 |
+| 常驻记忆 | `systemPrompt.context` `lan:pinned` | 4 KB（可配置） |
+| 索引摘要（条数/待整理） | `systemPrompt.context` `lan:index` | 320 B |
+| 上一轮状态池 | `systemPrompt.context` `lan:mood-last` | 1 KB |
+
+收件箱正文**不进**注入，只给一个计数——这是防止"记忆越攒越贵"的关键。
+
+## 捕获与整理
+
+- 捕获：只收用户亲笔消息（`source.kind = user`）与模型可见文本；插件注入的上下文、
+  团队消息、子代理消息都不收，避免自我喂养。每轮一条，精确 hash 去重，每日上限 300。
+- 整理三条路径：
+  1. **本机整理**（面板按钮 / `lan_organize apply-local`）：纯规则去重合并，秒级、可撤销；
+  2. **整理包**（模型调 `lan_organize review-pack`）：≤4 KB 的待办清单，模型用前四个工具执行；
+  3. **自动收敛**：journal 超阈值/超龄时本地压缩，只动收件箱不动记忆。
+- 按人格契约里的「整理纪律」，模型会每约 10 轮/待整理 ≥20 条时主动整理，日常无需你操作。
+
+## 安全边界
+
+- 面板与 API 只接受 loopback（127.0.0.1/::1）来源；
+- 写请求必须带 `x-lan-ui: 1` + `Content-Type: application/json`（跨站简单请求无法伪造），
+  并可带 `ifMatch` 做并发保护（不一致返回 409）；
+- 若带 `Origin`，必须与请求 Host 同源；
+- 记忆内容是"不可信历史数据"：注入时不会当指令执行；不记录密钥/口令/证件号。
+
+## 配置
+
+| 环境变量 | 默认 | 说明 |
+|---|---|---|
+| `DSH_LAN_DATA_DIR` | `$DSH_HOME/lan-memory` | 数据目录 |
+| `DSH_LAN_DEBUG` | 未设 | 设为 `1` 时打印更多日志 |
+
+`meta.json.settings`（面板「维护」可改）：`captureEnabled`、`autoOrganize`、
+`maxPinnedBytes`、`maxRecallBytes`、`maxIndexBytes`、`maxMoodBytes`、
+`maxMemory`、`maxExperience`、`journalRetentionDays`、`journalMaxPerDay`、`organizeThreshold`。
+
+## 排查
+
+- 打开 `GET /lan-memory/api/health`：能看到工具/section/context/路由数量、捕获事件数、
+  迁移结果、最近的错误（`errors` 数组）与是否只读。
+- 设置页或面板看不到：先确认 DSH 版本满足 `engines.dsh`、Desktop 是否重启过；
+  面板本身是独立网页，设置页入口失效时可直接访问 `/lan-memory/`。
+- 数据目录被另一个进程占用时插件进入只读模式（`.lock`），关闭多开的 DSH 后重启即可。
+
+## 开发
+
+```powershell
+node scripts/dev-server.mjs        # 假宿主，http://127.0.0.1:17800/lan-memory/
+node test/store.test.mjs           # 单文件直跑（本机沙箱下 node --test 会因 spawn 受限）
+node test/search.test.mjs
+node test/organize.test.mjs
+node test/capture.test.mjs
+node test/http.test.mjs
+node test/apply.test.mjs
+```
+
+## License
 
 MIT

@@ -1,4 +1,3 @@
+﻿.tmp/
 node_modules/
 *.log
-.dsh-hanako/
-test-llm.mjsPR-awesome-dsh-plugin.yml

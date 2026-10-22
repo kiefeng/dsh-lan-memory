@@ -1,39 +1,40 @@
 {
   "name": "dsh-lan-memory",
-  "version": "1.0.0",
-  "description": "Lan 记忆与人格系统复刻：常驻记忆（pinned）+ 检索记忆（JSONL 关键词检索）+ 经验库 + SOUL/MOOD 人格注入 + 设置页与 mood 卡片。基于《lan-dsh_v1.0_记忆人格复刻手册_20260816.md》实现。",
+  "version": "2.0.0",
+  "description": "澜 · 轻量本地记忆与人格系统 — 三层记忆（pinned/memory/experience）+ SOUL/MOOD 人格 + 零 LLM 捕获 + 本地管理面板",
   "private": false,
   "type": "module",
-  "main": "src/index.js",
+  "main": "lib/index.js",
   "exports": {
-    ".": "./src/index.js",
-    "./client": "./src/client.js",
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
   "files": [
-    "src",
+    "lib",
+    "ui",
     "docs",
     "cordis.patch.yml",
     "README.md",
-    "README.en.md"
+    "CHANGELOG.md"
   ],
   "license": "MIT",
+  "engines": {
+    "dsh": "^0.2.1-rc.2"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "dev": "node scripts/dev-server.mjs"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
     "client": {
+      "platform": "web",
       "inject": [
-        "@deepseek-ai/dsh-client-runtime",
-        "@deepseek-ai/dsh-client-connection",
-        "@deepseek-ai/dsh-client-ui-slots",
-        "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-client-ui-sidebar"
-      ],
-      "platform": "web"
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
     }
-  },
-  "dependencies": {
-    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6"
   }
 }
