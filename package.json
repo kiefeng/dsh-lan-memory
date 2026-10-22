@@ -1,6 +1,6 @@
 {
   "name": "dsh-lan-memory",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "description": "Local-first memory & persona plugin for DeepSeek Harness (DSH): rolling session summaries, compiled memory profile, atomic facts with tombstones, four explicit layers, SOUL/MOOD persona, zero-LLM capture, BM25 recall, tabbed settings page, themed mood card. 澜·轻量本地记忆与人格系统。",
   "keywords": [
     "dsh",

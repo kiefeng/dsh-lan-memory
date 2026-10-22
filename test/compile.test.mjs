@@ -85,6 +85,7 @@ test('编译失败：不标记线索、保留待编译、记录错误', async (t
 
 test('模型不返回 JSON 时用本地摘要兜底，不丢线索', async (t) => {
   const { store } = makeStore(t)
+  store.writeCompiled({ facts: '旧事实', today: '旧今天', week: '旧本周', longterm: '旧长期' })
   const llm = fakeLlm(() => '抱歉，我无法按 JSON 输出。')
   const compiler = createCompiler({ store, llm, logger: { log() {}, warn() {}, error() {} } })
   const result = await compiler.run({ force: true })
@@ -93,6 +94,8 @@ test('模型不返回 JSON 时用本地摘要兜底，不丢线索', async (t) =
   assert.ok(result.factsAdded >= 1)
   assert.equal(store.pendingJournal().length, 0)
   assert.ok(store.memoryProfile.includes('深潜'))
+  assert.equal(store.compiled.today, '旧今天', '兜底不应把原始提问写进 today')
+  assert.equal(store.compiled.week, '旧本周')
 })
 
 test('memory.md 可手动编辑，下一次编译作为当前画像输入', (t) => {
