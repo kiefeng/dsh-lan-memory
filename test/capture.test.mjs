@@ -93,6 +93,23 @@ test('关闭捕获后不再写 journal，但 mood 仍记录', (t) => {
   assert.equal(capture.getStats().enabled, false)
 })
 
+test('turn/end 缺失时可由 flushSession 兜底落盘', (t) => {
+  const { store, capture } = setup(t)
+  const s = { id: 'session-5' }
+  capture.handleSessionEvent(s, turnStart(1))
+  capture.handleSessionEvent(s, userEvent('没有 turn/end 也要记下来'))
+  capture.handleSessionEvent(s, assistantEvent('收到'))
+  assert.equal(store.readJournal(30).length, 0)
+  const rec = capture.flushSession('session-5', Date.now())
+  assert.ok(rec && rec.id)
+  assert.equal(store.readJournal(30).length, 1)
+  assert.equal(capture.getStats().flushed, 1)
+  assert.ok(capture.getStats().types['user/message'] >= 1)
+  assert.ok(capture.getStats().userSources.user >= 1)
+  capture.flushSession('session-5', Date.now())
+  assert.equal(store.readJournal(30).length, 1)
+})
+
 test('extractMood 解析四字段文本', () => {
   const mood = extractMood('前言\n<mood>\nVibe: 海面微澜\nSparks: a\nReflections: b\nWill: c\n</mood>\n后记')
   assert.ok(mood.includes('Vibe'))

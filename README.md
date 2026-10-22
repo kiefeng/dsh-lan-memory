@@ -25,7 +25,8 @@ v2 是对 2026-08 原型（v1.0.0）的重写。设计取舍与调研见 [`docs/
 
 ## 安装
 
-要求：DSH Desktop 0.2.1-rc.2（或同 minor 的 0.2.x）。
+要求：DSH Desktop 0.2.1-rc.2（或同 minor 的 0.2.x），且使用带 Web GUI 的组合（desktop / web）。
+`webServer` 是必选服务，headless / tui 组合不会加载本插件（工具与注入也随之不可用）。
 
 ### 桌面版（desktop profile）
 

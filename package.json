@@ -1,6 +1,6 @@
 {
   "name": "dsh-lan-memory",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "澜 · 轻量本地记忆与人格系统 — 三层记忆（pinned/memory/experience）+ SOUL/MOOD 人格 + 零 LLM 捕获 + 本地管理面板",
   "private": false,
   "type": "module",

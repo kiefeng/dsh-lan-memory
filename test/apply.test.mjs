@@ -37,7 +37,7 @@ function setup(t) {
   return { ...f, dispose, dir }
 }
 
-test('注册 6 工具 / 3 section / 3 context / 1 路由 / 1 事件', (t) => {
+test('注册 6 工具 / 3 section / 3 context / 1 路由 / 4 事件', (t) => {
   const { tools, sections, contexts, routes, events } = setup(t)
   assert.deepEqual(tools.map((x) => x.name).sort(), ['lan_forget', 'lan_list', 'lan_organize', 'lan_recall', 'lan_remember', 'lan_status'])
   for (const tool of tools) {
@@ -50,8 +50,7 @@ test('注册 6 工具 / 3 section / 3 context / 1 路由 / 1 事件', (t) => {
   assert.equal(routes.length, 1)
   assert.equal(routes[0].kind, 'prefix')
   assert.equal(routes[0].path, '/lan-memory')
-  assert.equal(events.length, 1)
-  assert.equal(events[0].name, 'session/event')
+  assert.deepEqual(events.map((e) => e.name), ['session/event', 'agent/turn-stopping', 'agent/status', 'agent/disposed'])
 })
 
 test('工具链路：remember → recall → list → forget → status', (t) => {

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.1 — 2026-10-22
+
+实机安装后的修复：
+
+- **修复捕获不落盘**：`session/event` 在真实宿主里没有把 `turn/end` 送到插件，导致 journal 一直为空。现在在 `agent/turn-stopping` / `agent/status(idle)` / `agent/disposed` 三个官方时机按 session 兜底落盘；buffer 落盘即删，重复触发不会重复写。
+- 捕获健康新增 `types`（收到的事件类型计数）与 `userSources`（用户消息来源计数），便于下次诊断事件形状漂移。
+- 从 `assistant/message` / `tool/call` 补齐 turn 号（`turn/start` 不可靠时仍能记录正确轮次）。
+- 兼容性说明：插件依赖 `webServer`，只适用于 desktop/web 这类有 Web GUI 的组合；headless/tui 不会加载（这是宿主 inject 语义决定的，不是 bug）。
+- 设置页入口已在真实 GUI 验证：`settings.section` 出现 `id=lan-memory order=35` 且 active。
+
 ## 2.0.0 — 2026-10-22
 
 面向 DSH Desktop 0.2.1-rc.2 的重写。不兼容 v1 的工具名与数据目录（旧数据自动迁移）。
