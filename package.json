@@ -1,7 +1,28 @@
 {
   "name": "dsh-lan-memory",
-  "version": "2.1.1",
-  "description": "澜 · 轻量本地记忆与人格系统 — 三层记忆（pinned/memory/experience）+ SOUL/MOOD 人格 + 零 LLM 捕获 + 本地管理面板",
+  "version": "2.2.0",
+  "description": "Local-first memory & persona plugin for DeepSeek Harness (DSH): three-layer file memory, SOUL/MOOD persona, zero-LLM capture, BM25 recall, local web panel, themed mood card. 澜·轻量本地记忆与人格系统。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "memory",
+    "persona",
+    "soul",
+    "mood",
+    "local-first",
+    "markdown",
+    "bm25",
+    "ai-companion"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiefeng/dsh-lan-memory.git"
+  },
+  "homepage": "https://github.com/kiefeng/dsh-lan-memory#readme",
+  "bugs": {
+    "url": "https://github.com/kiefeng/dsh-lan-memory/issues"
+  },
   "private": false,
   "type": "module",
   "main": "lib/index.js",

@@ -1,4 +1,40 @@
-# dsh-lan-memory v2 — 澜 · 轻量本地记忆与人格系统
+# dsh-lan-memory v2 — local-first memory & persona for DeepSeek Harness
+
+**English** · [中文](#中文)
+
+A lightweight, local-first **memory and persona plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH)**. It gives an agent durable, human-readable file memory, a SOUL/MOOD persona layer, zero-LLM session capture, BM25 recall, a local web panel, and a themed mood card.
+
+No Python service, no vector database, no API key, no background LLM extraction. Everything is stored as Markdown/JSONL under `$DSH_HOME/lan-memory` and can be read, edited, backed up and organized by hand.
+
+- **Three memory layers** — `pinned.md` (always injected), `memory.jsonl` (BM25 recall), `experience.jsonl` (lessons learned).
+- **SOUL / MOOD persona** — editable persona contract, mood status pool, and a themed mood card rendered in the conversation UI.
+- **Six tools** — `lan_remember`, `lan_recall`, `lan_list`, `lan_forget`, `lan_organize`, `lan_status`.
+- **Zero-LLM capture** — each turn is compacted into a local journal; the inbox never enters the system prompt and auto-expires.
+- **Local web panel** — five tabs (overview / memory / inbox / persona / maintenance) plus a settings-page entry.
+- **Safe writes** — atomic writes, previous-version backups, checksummed snapshots before organize/delete, single-writer lock, undo.
+- **Small and portable** — one host plugin and one browser bundle; no runtime imports of DSH packages except services injected by the host; `engines.dsh: ^0.2.1-rc.2`.
+
+### Install
+
+Requires DSH Desktop **0.2.1-rc.2** (or another 0.2.x with a Web GUI).
+
+```powershell
+# from a local checkout
+dsh plugin --profile desktop add "C:\path\to\dsh-lan-memory"
+
+# or directly from GitHub
+dsh plugin --profile desktop add github:kiefeng/dsh-lan-memory
+```
+
+The desktop profile must be installed while the Desktop app is fully quit. After restart, open **Settings → 澜记忆** or browse `http://127.0.0.1:<port>/lan-memory/`.
+
+### For agents and plugin catalogs
+
+`dsh.bundle` is declared in `package.json` with `cordis.patch.yml`, so the repository is installable through `dsh plugin add`. Topics: `dsh-plugin`, `deepseek-harness`, `memory`, `persona`, `local-first`, `markdown`.
+
+---
+
+## 中文
 
 > 个人自用的本地记忆层：文件是唯一真源，零外部服务、零 API Key、零向量库。
 > 三层记忆 + SOUL/MOOD 人格 + 零 LLM 捕获 + 本地管理面板。

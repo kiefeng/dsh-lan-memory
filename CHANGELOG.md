@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0 — 2026-10-22
+
+发现性与市场就绪：
+
+- README 顶部增加英文介绍（overview / features / install / agent catalog hints），中文说明移到 `## 中文`。
+- `package.json` 增加英文主描述、`keywords`、`repository` / `homepage` / `bugs`，便于 npm 与插件市场索引。
+- GitHub 仓库 About、topics 同步为英文 + 记忆/人格关键词。
+- 补记 2.1.1 已包含的收件箱与写入护栏：待整理 14 天 / 60 条上限、review-pack 标记 reviewed、
+  线索机械精简、`lan_remember` 300/800 字上限与整段对话拒绝。
+- 声明 `dsh.bundle` 与 `cordis.patch.yml` 齐全，满足 awesome-dsh-plugin 收录条件。
+
 ## 2.1.1 — 2026-10-22
 
 ### 人格与文风（保持原人设，只补表达约束）
