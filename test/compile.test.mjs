@@ -64,6 +64,17 @@ test('自动编译：抽取事实 → 写 facts/画像 → 标记 compiled', asy
   assert.equal(store.facts.length, 2)
 })
 
+test('待编译不足阈值时预约空闲编译，而不是永远跳过', async (t) => {
+  const { store } = makeStore(t)
+  const llm = fakeLlm(() => '[]')
+  const compiler = createCompiler({ store, llm, logger: { log() {}, warn() {}, error() {} } })
+  const result = await compiler.run()
+  assert.equal(result.ok, true)
+  assert.equal(result.skipped, 'below threshold')
+  assert.equal(result.pending, 2)
+  assert.ok(result.rescheduledMs > 0)
+})
+
 test('编译失败：不标记线索、保留待编译、记录错误', async (t) => {
   const dir = makeTmp(t, 'compile-fail-')
   const store = new Store({ dataDir: dir, logger: { log() {}, warn() {}, error() {} } })

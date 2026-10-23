@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.9.0 — 2026-10-23
+
+一致性收口：
+
+- 删除 `client.js` 中未被引用的旧 `SettingsPage`（约 14 KB），去掉独立面板/iframe 的残留引用；设置页只保留六标签页实现。
+- `readMemoryProfile()` 现在会把 `memory.md` 解析回 `compiled` 四段；手改文件后下一次编译/跨天滚动不会再用旧内存副本覆盖。
+- 删除手动记忆统一走 `store.deleteMemory()`：同名自动事实一并写墓碑删除；设置页删除、HTTP API 与 `lan_forget` 行为一致。
+- settings API 白名单补齐 `maxManualBytes` / `maxEntryChars` / `maxPinnedEntryChars` / `journalPendingDays` / `journalPendingMax`；移除已废弃的 `autoOrganize` / `organizeThreshold`。
+- 设置页「维护」新增编译调度输入：待编译阈值、空闲分钟数，带 ifMatch 保存。
+- 不足阈值时预约到最早线索满足空闲时长的那一刻再编译；修复“空闲编译永远不触发”的调度缺口。
+- 设置页截图更新为当前六标签页 UI；README 移除“截图过期”说明；废弃的 panel-contract 移入 `docs/legacy/`。
+- `lan_recall` 描述补上自动事实层；测试增至 68 项。
+
 ## 2.8.2 — 2026-10-22
 
 编译稳定性与数据卫生：

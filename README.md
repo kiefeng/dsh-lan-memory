@@ -19,7 +19,9 @@ No Python service, no vector database, no API key. Everything is stored as Markd
 
 *The mood status card: Vibe, Sparks, Reflections and Will, rendered locally from the turn’s `<mood>` block.*
 
-> The settings screenshot under `docs/images/settings-preview.png` predates v2.8.0; the current page has six tabs and the four-layer split.
+![Native DSH settings page](docs/images/settings-preview.png)
+
+*The settings page: overview, six tabs, runtime status, automation switches, and all memory management.*
 
 ### Install
 
@@ -62,11 +64,11 @@ MCP 桥接。捕获不花模型调用；摘要与事实抽取用你在设置页�
 |---|---|---|---|---|
 | 常驻 `pinned.md` | 只手动，用户明确要求 | 每轮 | 否 | 身份、硬约束、长期不变偏好 |
 | 手动记忆 `memory.jsonl` | 用户说“记住” / 手动新增 | 每轮 `lan:manual` | 否 | 明确要求保留的事实、决定 |
-| 自动事实 `facts.jsonl` | 只由自动编译写 | 否 | 是 | 从摘要抽取的偏好、长期事实 |
+| 自动事实 `facts.jsonl` | 自动编译为主；设置页可手动增改/删除 | 否（经画像间接注入） | 是 | 从摘要抽取的偏好、长期事实；也可人工修正 |
 | 经验 `experience.jsonl` | 任务完成/踩坑/手动 | 否 | 否 | 可复用方法，`lan_recall(layer=experience)` |
 | 画像 `memory.md` | 自动编译，可手改 | 每轮 `lan:memory` | — | 四段摘要，本身不是输入层 |
 
-自动编译**不会**写常驻、手动记忆或经验；手动记忆也**不会**被复制成自动事实。
+自动编译**不会**写常驻、手动记忆或经验；手动记忆也**不会**被复制成自动事实。自动事实可在设置页手动修正，但工具层只让编译写它。
 
 ## 特性
 
@@ -176,7 +178,7 @@ lan-memory/
 `compileIdleMinutes`、`memoryProvider`、`memoryModel`、`maxFacts`、`maxMemoryBytes`、`maxManualBytes`、
 `maxPinnedBytes`、`maxRecallBytes`、`maxIndexBytes`、`maxMoodBytes`、`maxEntryChars`、
 `maxPinnedEntryChars`、`journalPendingDays`、`journalPendingMax`、`maxMemory`、`maxExperience`、
-`journalRetentionDays`、`journalMaxPerDay`、`organizeThreshold`。
+`journalRetentionDays`、`journalMaxPerDay`。
 
 ## 排查
 
@@ -198,7 +200,7 @@ node test/apply.test.mjs
 node test/compile.test.mjs
 ```
 
-64 项测试，覆盖自动编译、摘要、每日边界、事实墓碑、四层检索和 HTTP 安全。
+68 项测试，覆盖自动编译、摘要、每日边界、事实墓碑、四层检索、设置页 API 与 HTTP 安全。
 
 ## License
 

@@ -88,6 +88,16 @@ test('write 后保留 .bak 上一版', (t) => {
   assert.ok(readFileSync(join(dir, 'persona.md.bak'), 'utf8').includes('A'))
 })
 
+test('手改 memory.md 后 readMemoryProfile 会同步解析四段', (t) => {
+  const { store, dir } = tmpStore(t)
+  store.init()
+  writeFileSync(join(dir, 'memory.md'), '## 重要事实\n\n手动改成 A\n\n## 今天\n\n手动改成 B\n', 'utf8')
+  const text = store.readMemoryProfile()
+  assert.ok(text.includes('手动改成 A'))
+  assert.equal(store.compiled.facts, '手动改成 A')
+  assert.equal(store.compiled.today, '手动改成 B')
+})
+
 test('journal 追加/读取/状态/待整理', (t) => {
   const { store } = tmpStore(t)
   store.init()

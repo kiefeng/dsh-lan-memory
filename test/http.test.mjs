@@ -185,6 +185,33 @@ test('mood 接口兼容只有一句 Vibe 的裸文本', async (t) => {
   assert.equal(data.mood.text, '海面稳住，编译管线接上了。')
 })
 
+test('settings 允许修改编译相关上限', async (t) => {
+  const { base, store } = await setup(t)
+  const state = await (await fetch(base + '/lan-memory/api/state')).json()
+  const r = await post(base, '/lan-memory/api/settings', {
+    settings: { maxManualBytes: 1234, maxEntryChars: 280, journalPendingMax: 40 },
+    ifMatch: state.etag,
+  }, { origin: base })
+  assert.equal(r.status, 200)
+  assert.equal(store.meta.settings.maxManualBytes, 1234)
+  assert.equal(store.meta.settings.maxEntryChars, 280)
+  assert.equal(store.meta.settings.journalPendingMax, 40)
+})
+
+test('删除手动记忆时同名自动事实写墓碑，避免编译复活', async (t) => {
+  const { base, store } = await setup(t)
+  const memory = store.addMemory({ content: '用户喜欢深潜' })
+  store.addFact({ fact: '用户喜欢深潜', source: 'auto' })
+  const state = await (await fetch(base + '/lan-memory/api/state')).json()
+  const r = await post(base, '/lan-memory/api/memory', {
+    layer: 'memory', action: 'delete', id: memory.id, ifMatch: state.etag,
+  }, { origin: base })
+  assert.equal(r.status, 200)
+  assert.equal(store.memory.length, 0)
+  assert.equal(store.facts.length, 0)
+  assert.ok(store.factTombstones.length >= 1)
+})
+
 test('export 返回附件 JSON', async (t) => {
   const { base } = await setup(t)
   const r = await fetch(base + '/lan-memory/api/export')
