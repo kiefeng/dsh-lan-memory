@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { Store } from '../lib/store.js'
-import { createOrganizer, planDeterministic } from '../lib/organize.js'
+import { createOrganizer, planDeterministic, planFactClusters } from '../lib/organize.js'
 import { makeTmp } from './_tmp.mjs'
 
 function setup(t) {
@@ -26,6 +26,24 @@ test('精确重复与近似重复会被识别为合并动作', (t) => {
   assert.equal(preview.countsAfter.memory, 2)
   // 干跑不写盘
   assert.equal(store.memory.length, 3)
+})
+
+test('事实近似重复可预览、合并并撤销', (t) => {
+  const { store } = setup(t)
+  store.addFact({ fact: '用户喜欢深海潜水并观察鲸鱼的声音和动作', tags: ['偏好'] })
+  store.addFact({ fact: '用户喜欢深海潜水并观察鲸鱼的声音和动向', tags: ['兴趣'] })
+  const clusters = planFactClusters(store.facts)
+  assert.equal(clusters.length, 1)
+  assert.equal(clusters[0].ids.length, 2)
+  assert.ok(clusters[0].ids.includes(clusters[0].keepId))
+  store.undoSnapshot('merge-facts')
+  const result = store.mergeFacts(clusters[0])
+  assert.equal(store.facts.length, 1)
+  assert.ok(store.factTombstones.length >= 1)
+  assert.ok(result.tags.includes('偏好') && result.tags.includes('兴趣'))
+  const undo = store.undoLast()
+  assert.equal(store.facts.length, 2)
+  assert.ok(undo.restored.includes('facts.jsonl'))
 })
 
 test('applyLocal 合并后可撤销', (t) => {

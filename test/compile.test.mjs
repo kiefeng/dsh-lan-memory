@@ -43,6 +43,7 @@ test('自动编译：抽取事实 → 写 facts/画像 → 标记 compiled', asy
       today: '上午聊了记忆系统的自动整理。',
       week: '本周在迭代本地记忆插件。',
       longterm: '用户偏好直接、可修改的本地工具。',
+      experience: [{ category: '记忆系统', content: '合并事实前先预览，保留长条并写墓碑。' }],
     })
   })
   const compiler = createCompiler({ store, llm, logger: { log() {}, warn() {}, error() {} } })
@@ -50,6 +51,8 @@ test('自动编译：抽取事实 → 写 facts/画像 → 标记 compiled', asy
   assert.equal(result.ok, true)
   assert.equal(result.factsAdded, 2)
   assert.equal(store.facts.length, 2)
+  assert.equal(store.experienceCandidates.filter((c) => c.status === 'pending').length, 1)
+  assert.match(store.experienceCandidates[0].content, /合并事实/)
   assert.ok(Object.keys(store.summaries || {}).length >= 1)
   assert.equal(store.pendingJournal().length, 0)
   assert.ok(existsSync(join(dir, 'memory.md')))

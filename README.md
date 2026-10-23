@@ -10,6 +10,8 @@ No Python service, no vector database, no API key. Everything is stored as Markd
 - **Rolling summary → facts → profile** — per-session summary, atomic fact extraction, then `重要事实 / 今天 / 本周 / 长期` into `memory.md`; editable in settings.
 - **Daily boundary** — yesterday’s `today` rolls into `week`, then `today` resets.
 - **Facts stay deleted** — deleting an automatic fact writes a normalized tombstone; later compiles skip it. Manual re-add clears the tombstone.
+- **Review-before-merge** — near-duplicate facts are clustered in the settings page; merging keeps the longest entry, tombstones the rest, and can be undone.
+- **Experience candidates** — compile can propose 0–1 reusable lesson/method; nothing enters `experience.jsonl` until you accept it.
 - **SOUL / MOOD persona** — editable persona contract and a themed status-pool card in the conversation UI.
 - **Six tools** — `lan_remember`, `lan_recall`, `lan_list`, `lan_forget`, `lan_organize`, `lan_status`.
 - **One management surface** — DSH Settings → 澜记忆, with tabs: 概览 / 记忆 / 经验 / 收件箱 / 人格 / 维护. No separate web panel.
@@ -76,6 +78,8 @@ MCP 桥接。捕获不花模型调用；摘要与事实抽取用你在设置页�
 - **摘要 → 事实 → 画像**：滚动摘要 3–6 句（≤300 字），再从摘要抽原子事实；摘要失败退回原始 journal。
 - **每日边界**：跨天把旧 `today` 沉淀进 `week`，再清空 `today`；不额外调模型。
 - **事实墓碑**：删除的自动事实不会被下一次编译按相同文本写回；手动重新添加可解除。
+- **事实合并预览**：设置页「合并相似事实」只给候选；确认后保留最长一条、其余写墓碑，可撤销。
+- **经验候选**：编译可提出 0–1 条可复用方法；接受后才写入 `experience.jsonl`，忽略则保留为 dismissed，不再反复出现。
 - **六个工具**：`lan_remember` / `lan_recall` / `lan_list` / `lan_forget` / `lan_organize` / `lan_status`。
 - **零 LLM 捕获**：`session/event` → 每轮一条 `journal/YYYY-MM-DD.jsonl`，只做机械去噪；捕获本身不调模型。
 - **一个管理面**：DSH 设置页「澜记忆」，标签为 概览 / 记忆 / 经验 / 收件箱 / 人格 / 维护；没有独立网页面板。
@@ -112,6 +116,7 @@ lan-memory/
 ├── experience.jsonl        # 经验库
 ├── facts.jsonl             # 自动抽取的原子事实
 ├── fact-tombstones.json    # 已删除事实的规范化文本墓碑
+├── experience-candidates.json # 编译产出的经验候选（待接受/已忽略）
 ├── summaries.json          # 每会话滚动摘要
 ├── memory.md               # 四段编译画像（可手改）
 ├── facts.md / today.md / week.md / longterm.md
@@ -151,9 +156,12 @@ lan-memory/
   1. 每会话滚动摘要：上一份摘要 + 新对话 → 3–6 句；
   2. 从摘要抽取原子事实（一条一事、2–5 个标签）；
   3. 用「当前画像 + 新增事实 + 最近摘要」重写四段画像，拼成 `memory.md`；
-  4. 成功后才把 journal 标记为 `compiled`；失败保留待编译。
+  4. 同一轮顺带提出 0–1 条经验候选，进入设置页「经验」待确认；
+  5. 成功后才把 journal 标记为 `compiled`；失败保留待编译。
 - 每日边界：跨天把旧 `today` 移进 `week`，再清空 `today`。
 - 事实墓碑：删除自动事实会写 `fact-tombstones.json`；编译跳过同文本。
+- 事实合并：设置页只做近似重复预览；确认后保留最长一条并给其余写墓碑，可撤销。
+- 经验候选：编译产出的候选不自动写库；接受才进入经验库，忽略会标记 dismissed。
 - 手动记忆：用户说“记住”只写 `memory.jsonl`，不复制成 facts；通过 `lan:manual` 每轮注入。
 - 本地整理仍保留：`lan_organize apply-local` 对 `memory.jsonl` 做确定性去重合并，可撤销。
 
@@ -200,7 +208,7 @@ node test/apply.test.mjs
 node test/compile.test.mjs
 ```
 
-68 项测试，覆盖自动编译、摘要、每日边界、事实墓碑、四层检索、设置页 API 与 HTTP 安全。
+71 项测试，覆盖自动编译、摘要、每日边界、事实墓碑/合并、经验候选、四层检索、设置页 API 与 HTTP 安全。
 
 ## License
 

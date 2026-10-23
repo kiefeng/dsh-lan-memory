@@ -212,6 +212,46 @@ test('删除手动记忆时同名自动事实写墓碑，避免编译复活', as
   assert.ok(store.factTombstones.length >= 1)
 })
 
+test('事实合并预览与确认写入', async (t) => {
+  const { base, store } = await setup(t)
+  store.addFact({ fact: '用户喜欢深海潜水并观察鲸鱼的声音和动作', tags: ['偏好'] })
+  store.addFact({ fact: '用户喜欢深海潜水并观察鲸鱼的声音和动向', tags: ['兴趣'] })
+  let state = await (await fetch(base + '/lan-memory/api/state')).json()
+  const preview = await post(base, '/lan-memory/api/facts', { action: 'merge-preview', ifMatch: state.etag }, { origin: base })
+  assert.equal(preview.status, 200)
+  const clusters = (await preview.json()).clusters
+  assert.equal(clusters.length, 1)
+  state = await (await fetch(base + '/lan-memory/api/state')).json()
+  const applied = await post(base, '/lan-memory/api/facts', {
+    action: 'merge-apply', clusters: [clusters[0]], ifMatch: state.etag,
+  }, { origin: base })
+  assert.equal(applied.status, 200)
+  assert.equal(store.facts.length, 1)
+  assert.ok(store.factTombstones.length >= 1)
+})
+
+test('经验候选接受后进入经验库，忽略后不再出现', async (t) => {
+  const { base, store } = await setup(t)
+  store.addExperienceCandidates([
+    { category: '记忆系统', content: '合并事实前先预览。' },
+    { category: '记忆系统', content: '另一个候选。' },
+  ])
+  const pending = store.experienceCandidates.filter((c) => c.status === 'pending')
+  assert.equal(pending.length, 2)
+  let state = await (await fetch(base + '/lan-memory/api/state')).json()
+  const accepted = await post(base, '/lan-memory/api/experience-candidates', {
+    action: 'accept', id: pending[0].id, ifMatch: state.etag,
+  }, { origin: base })
+  assert.equal(accepted.status, 200)
+  assert.equal(store.experience.length, 1)
+  state = await (await fetch(base + '/lan-memory/api/state')).json()
+  const dismissed = await post(base, '/lan-memory/api/experience-candidates', {
+    action: 'dismiss', id: pending[1].id, ifMatch: state.etag,
+  }, { origin: base })
+  assert.equal(dismissed.status, 200)
+  assert.equal(store.experienceCandidates.filter((c) => c.status === 'pending').length, 0)
+})
+
 test('export 返回附件 JSON', async (t) => {
   const { base } = await setup(t)
   const r = await fetch(base + '/lan-memory/api/export')
