@@ -78,6 +78,30 @@ test('待编译不足阈值时预约空闲编译，而不是永远跳过', async
   assert.ok(result.rescheduledMs > 0)
 })
 
+test('经验候选可交给模型合并，重复候选被收敛', async (t) => {
+  const { store } = makeStore(t)
+  store.addExperienceCandidates([
+    { category: '逐项验证', content: '一次性加多项改动容易白屏，回滚后要逐项验证。' },
+    { category: '稳定性验证', content: '功能改动逐项验证；白屏先查浏览器旧缓存。' },
+    { category: '笔记备份', content: '笔记系统要保留第二份备份。' },
+  ])
+  const llm = fakeLlm((prompt) => {
+    if (prompt.includes('经验整理器')) {
+      return JSON.stringify([
+        { category: '逐项验证', content: '功能改动逐项验证；白屏先查浏览器旧缓存，回滚后再定位。' },
+        { category: '笔记备份', content: '笔记系统要保留第二份备份。' },
+      ])
+    }
+    return '[]'
+  })
+  const compiler = createCompiler({ store, llm, logger: { log() {}, warn() {}, error() {} } })
+  const result = await compiler.consolidateExperience()
+  assert.equal(result.ok, true)
+  assert.equal(result.before, 3)
+  assert.equal(result.after, 2)
+  assert.equal(store.experienceCandidates.filter((c) => c.status === 'pending').length, 2)
+})
+
 test('编译失败：不标记线索、保留待编译、记录错误', async (t) => {
   const dir = makeTmp(t, 'compile-fail-')
   const store = new Store({ dataDir: dir, logger: { log() {}, warn() {}, error() {} } })
