@@ -78,8 +78,10 @@ MCP 桥接。捕获不花模型调用；摘要与事实抽取用你在设置页�
 - **摘要 → 事实 → 画像**：滚动摘要 3–6 句（≤300 字），再从摘要抽原子事实；摘要失败退回原始 journal。
 - **每日边界**：跨天把旧 `today` 沉淀进 `week`，再清空 `today`；不额外调模型。
 - **事实墓碑**：删除的自动事实不会被下一次编译按相同文本写回；手动重新添加可解除。
-- **事实合并预览**：设置页「合并相似事实」只给候选；确认后保留最长一条、其余写墓碑，可撤销。
-- **经验候选**：编译可提出 0–1 条可复用方法；接受后才写入 `experience.jsonl`，忽略则保留为 dismissed，不再反复出现。多条候选可用「整理候选」交给模型合并去重。
+- **事实去重**：编译成功后自动合并高置信重复事实（几乎同句，或标签一致且相似度够高），写 undo 快照可整组回滚；其余候选进设置页「合并相似事实」，支持「全部合并」。判据是字符串相似度 + 标签重叠，不再只认完全相同的文本。
+- **事实有时间锚**：每条事实都带 `time`（模型没给时用写入日期兜底），设置页显示日期，能判断哪条更新。
+- **兜底不污染画像**：模型抽取失败时用本地规则切片兜底，标 `source: fallback` 留在事实库（不丢线索），但不参与画像，等下次成功编译或人工修正。
+- **经验候选**：编译可提出 0–1 条可复用方法；接受后才写入 `experience.jsonl`，忽略则保留为 dismissed，不再反复出现。多条候选可用「整理候选」交给模型合并去重；积压 ≥5 条时会自动归并一次（每 20 小时最多一次）。
 - **六个工具**：`lan_remember` / `lan_recall` / `lan_list` / `lan_forget` / `lan_organize` / `lan_status`。
 - **零 LLM 捕获**：`session/event` → 每轮一条 `journal/YYYY-MM-DD.jsonl`，只做机械去噪；捕获本身不调模型。
 - **一个管理面**：DSH 设置页「澜记忆」，标签为 概览 / 记忆 / 经验 / 收件箱 / 人格 / 维护；没有独立网页面板。
@@ -154,15 +156,17 @@ lan-memory/
   每轮一条，精确 hash 去重，每日上限 300。
 - 自动编译：待编译达到 `autoCompileThreshold`（默认 6）条或空闲时，调用设置页指定的模型：
   1. 每会话滚动摘要：上一份摘要 + 新对话 → 3–6 句；
-  2. 从摘要抽取原子事实（一条一事、2–5 个标签）；
+  2. 从摘要抽取原子事实（一条一事、2–5 个标签、带时间）；
   3. 用「当前画像 + 新增事实 + 最近摘要」重写四段画像，拼成 `memory.md`；
   4. 同一轮顺带提出 0–1 条经验候选，进入设置页「经验」待确认；
-  5. 多条候选可用「整理候选」让模型合并去重，只改候选，不自动写经验库；
+  5. 成功后自动合并高置信重复事实（`autoMergeFacts` 可关），并让候选队列在积压时归并一次；
   6. 成功后才把 journal 标记为 `compiled`；失败保留待编译。
 - 每日边界：跨天把旧 `today` 移进 `week`，再清空 `today`。
 - 事实墓碑：删除自动事实会写 `fact-tombstones.json`；编译跳过同文本。
-- 事实合并：设置页只做近似重复预览；确认后保留最长一条并给其余写墓碑，可撤销。
-- 经验候选：编译产出的候选不自动写库；接受才进入经验库，忽略会标记 dismissed。
+- 事实合并：高置信簇由编译自动合并；低置信簇只在设置页预览，确认后保留最长一条并给其余写墓碑，可撤销。
+- 事实时间：抽取时把模型给的 `time` 或记录日期写进事实；历史条目读取时用 `created_at` 补齐。
+- 兜底事实：抽取失败时本地切片标 `source: fallback`，入库但不进画像。
+- 经验候选：编译产出的候选不自动写库；接受才进入经验库，忽略会标记 dismissed；积压 ≥5 条自动归并一次。
 - 手动记忆：用户说“记住”只写 `memory.jsonl`，不复制成 facts；通过 `lan:manual` 每轮注入。
 - 本地整理仍保留：`lan_organize apply-local` 对 `memory.jsonl` 做确定性去重合并，可撤销。
 
@@ -184,7 +188,8 @@ lan-memory/
 | `DSH_LAN_DEBUG` | 未设 | 设为 `1` 时打印更多日志 |
 
 `meta.json.settings`（设置页可改）：`captureEnabled`、`autoCompile`、`autoCompileThreshold`、
-`compileIdleMinutes`、`memoryProvider`、`memoryModel`、`maxFacts`、`maxMemoryBytes`、`maxManualBytes`、
+`compileIdleMinutes`、`autoMergeFacts`、`autoConsolidateCandidates`、`memoryProvider`、`memoryModel`、
+`maxFacts`、`maxMemoryBytes`、`maxManualBytes`、
 `maxPinnedBytes`、`maxRecallBytes`、`maxIndexBytes`、`maxMoodBytes`、`maxEntryChars`、
 `maxPinnedEntryChars`、`journalPendingDays`、`journalPendingMax`、`maxMemory`、`maxExperience`、
 `journalRetentionDays`、`journalMaxPerDay`。
@@ -209,7 +214,7 @@ node test/apply.test.mjs
 node test/compile.test.mjs
 ```
 
-72 项测试，覆盖自动编译、摘要、每日边界、事实墓碑/合并、经验候选/收敛、四层检索、设置页 API 与 HTTP 安全。
+79 项测试，覆盖自动编译、摘要、每日边界、事实时间锚、事实墓碑/去重合并、四层检索无损 JSON、经验候选/收敛、设置页 API 与 HTTP 安全。
 
 ## License
 

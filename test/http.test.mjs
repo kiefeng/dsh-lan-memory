@@ -21,8 +21,24 @@ async function setup(t) {
     getHealth: () => ({ version: 'test', tools: 6, sections: 3, contexts: 3, routes: 1, capture: capture.getStats() }),
   })
   const server = http.createServer((req, res) => { handler.handle(req, res) })
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
-  const port = server.address().port
+  // 随机端口会偶尔落到 undici 的禁连端口（如 6666），换到高位端口重试。
+  let port = 0
+  for (let attempt = 0; attempt < 8 && !port; attempt++) {
+    const candidate = 20000 + Math.floor(Math.random() * 40000)
+    try {
+      await new Promise((resolve, reject) => {
+        server.once('error', reject)
+        server.listen(candidate, '127.0.0.1', resolve)
+      })
+      port = candidate
+    } catch {
+      server.removeAllListeners('error')
+    }
+  }
+  if (!port) {
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    port = server.address().port
+  }
   const base = `http://127.0.0.1:${port}`
   t.after(async () => { await new Promise((resolve) => server.close(resolve)); try { store.releaseLock() } catch { /* 忽略 */ } })
   return { base, store, port }
@@ -266,4 +282,12 @@ test('未知 API 404', async (t) => {
   const { base } = await setup(t)
   const r = await fetch(base + '/lan-memory/api/nope')
   assert.equal(r.status, 404)
+})
+
+test('state 返回全部自动事实，不再截断 80 条', async (t) => {
+  const { base, store } = await setup(t)
+  for (let i = 0; i < 85; i++) store.addFact({ fact: `批量事实 ${i}`, tags: ['批量'] })
+  const state = await (await fetch(base + '/lan-memory/api/state')).json()
+  assert.equal(state.counts.facts, 85)
+  assert.equal(state.facts.length, 85, '设置页应拿到全部事实')
 })

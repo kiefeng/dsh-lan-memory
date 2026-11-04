@@ -131,7 +131,9 @@ test('模型不返回 JSON 时用本地摘要兜底，不丢线索', async (t) =
   assert.equal(result.fallback, true)
   assert.ok(result.factsAdded >= 1)
   assert.equal(store.pendingJournal().length, 0)
-  assert.ok(store.memoryProfile.includes('深潜'))
+  // 兜底事实仍进 facts.jsonl（不丢线索），但不写进画像，避免把用户原话当画像。
+  assert.ok(store.facts.some((f) => /深潜/.test(f.fact)), '兜底事实应留在事实库')
+  assert.equal(store.compiled.facts, '旧事实', '兜底事实不参与画像')
   assert.equal(store.compiled.today, '旧今天', '兜底不应把原始提问写进 today')
   assert.equal(store.compiled.week, '旧本周')
 })
@@ -153,4 +155,16 @@ test('跨天时把旧 today 沉淀进 week 并清空 today', (t) => {
   assert.equal(store.compiled.today, '（暂无）')
   assert.ok(store.compiled.week.includes('昨天做的事'))
   assert.ok(store.compiled.week.includes('2000-01-01'))
+})
+
+test('抽取事实的 time 为空时用记录时间兜底', async (t) => {
+  const { store } = makeStore(t)
+  const llm = fakeLlm((prompt) => {
+    if (prompt.includes('摘要器')) return '用户喜欢深潜。'
+    if (prompt.includes('抽取器')) return JSON.stringify([{ fact: '用户喜欢深潜', tags: ['兴趣'], time: null }])
+    return JSON.stringify({ facts: '用户喜欢深潜', today: '（暂无）', week: '（暂无）', longterm: '（暂无）', experience: [] })
+  })
+  const compiler = createCompiler({ store, llm, logger: { log() {}, warn() {}, error() {} } })
+  await compiler.run({ force: true })
+  assert.match(String(store.facts[0].time), /^\d{4}-\d{2}-\d{2}/, 'time 应补成日期')
 })

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { Store, parsePersonaMarkdown, serializePersonaMarkdown, parsePinnedMarkdown, normalizeTags } from '../lib/store.js'
+import { Store, parsePersonaMarkdown, serializePersonaMarkdown, parsePinnedMarkdown, normalizeTags, normalizeFacts } from '../lib/store.js'
 import { makeTmp } from './_tmp.mjs'
 
 function tmpStore(t) {
@@ -193,4 +193,13 @@ test('v1 数据迁移：复制不移动、persona.json 转 md', (t) => {
 test('normalizeTags 去重与截断', () => {
   assert.deepEqual(normalizeTags('a, b，a  c'), ['a', 'b', 'c'])
   assert.deepEqual(normalizeTags(['x', 'x', '']), ['x'])
+})
+
+test('事实没有 time 时用写入日期补全', () => {
+  const facts = normalizeFacts([
+    { fact: '甲', created_at: '2026-10-23T08:00:00.000Z' },
+    { fact: '乙', created_at: '2026-11-04T01:00:00.000Z', time: '2026-11-04T09:30' },
+  ])
+  assert.equal(facts[0].time, '2026-10-23')
+  assert.equal(facts[1].time, '2026-11-04T09:30')
 })

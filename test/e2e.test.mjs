@@ -85,3 +85,25 @@ test('端到端：20 轮捕获 → 召回 → 整理，不碰人格', (t) => {
   dispose()
   assert.ok(routes.length === 1)
 })
+
+test('lan_recall 结果可无损 JSON（不夹 undefined 字段）', (t) => {
+  const dir = makeTmp(t, 'e2e-recall-')
+  const home = makeTmp(t, 'e2e-recall-home-')
+  const prev = process.env.DSH_HOME
+  process.env.DSH_HOME = home
+  t.after(() => {
+    if (prev === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = prev
+  })
+  const { ctx, tools } = fakeCtx()
+  const dispose = apply(ctx, { dataDir: dir })
+  const by = Object.fromEntries(tools.map((x) => [x.name, x]))
+  by.lan_remember.execute({ content: '用户喜欢深潜', tags: ['偏好'] })
+  by.lan_remember.execute({ content: '证据核查先看原文表述', layer: 'experience', category: '核查' })
+  // 宿主对工具输出做 lossless JSON 校验；嵌套 undefined 会整条拒收（旧 bug）。
+  for (const layer of ['memory', 'experience', 'fact']) {
+    const r = by.lan_recall.execute({ query: '深潜 核查', layer })
+    assert.deepEqual(JSON.parse(JSON.stringify(r)), r, `${layer} 层返回必须是无损 JSON`)
+  }
+  dispose()
+})

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { Store } from '../lib/store.js'
-import { createOrganizer, planDeterministic, planFactClusters } from '../lib/organize.js'
+import { createOrganizer, planDeterministic, planFactClusters, autoMergeFacts, factPairSignals } from '../lib/organize.js'
 import { makeTmp } from './_tmp.mjs'
 
 function setup(t) {
@@ -116,4 +116,46 @@ test('过期条目只提示不自动删除', (t) => {
   assert.ok(stale)
   assert.equal(stale.kind, 'none')
   assert.equal(preview.countsAfter.memory, preview.countsBefore.memory)
+})
+
+test('中文改写靠标签重叠抓重复，不再只认字符串相似度', (t) => {
+  const { store } = setup(t)
+  // 这两条字符串相似度只有 0.64，旧阈值 0.85 抓不到，但标签完全一致。
+  store.addFact({ fact: '用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] })
+  store.addFact({ fact: '用户的 Linux 用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] })
+  // 华硕这两条相似度 0.5：能进预览，但不够高置信，不该自动合并。
+  store.addFact({ fact: '用户使用一台较老的华硕笔记本，配置为4G内存和5400转机械硬盘。', tags: ['设备', '硬件', '笔记本'] })
+  store.addFact({ fact: '用户有一台老华硕笔记本，配置为4G内存和机械硬盘。', tags: ['设备', '硬件', '笔记本'] })
+  store.addFact({ fact: '用户对 Arch Linux 及 Omarchy 的安装与使用有兴趣。', tags: ['兴趣', 'Linux'] })
+  const sig = factPairSignals(store.facts[0], store.facts[1])
+  assert.ok(sig.sim < 0.85, '这对的字符串相似度应低于旧阈值')
+  const clusters = planFactClusters(store.facts)
+  assert.equal(clusters.length, 2)
+  const k = clusters.find((c) => c.ids.includes(store.facts[0].id))
+  const hw = clusters.find((c) => c.ids.includes(store.facts[2].id))
+  assert.equal(k.auto, true, '标签完全一致且相似度过半的簇允许自动合并')
+  assert.equal(hw.auto, false, '只有 0.5 相似度的簇只进预览')
+})
+
+test('高置信重复事实自动合并，写墓碑并可撤销', (t) => {
+  const { store } = setup(t)
+  store.addFact({ fact: '用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] })
+  store.addFact({ fact: '用户的 Linux 用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] })
+  const res = autoMergeFacts(store)
+  assert.ok(res.merged >= 2)
+  assert.equal(store.facts.length, 1)
+  assert.ok(store.factTombstones.length >= 1)
+  assert.ok(store.meta.lastFactMerge && store.meta.lastFactMerge.merged >= 2)
+  const undo = store.undoLast()
+  assert.equal(store.facts.length, 2)
+  assert.ok(undo.restored.includes('facts.jsonl'))
+})
+
+test('同一话题的不同属性不会被自动合并', (t) => {
+  const { store } = setup(t)
+  store.addFact({ fact: '用户特别在意 SilverBullet 的表格编辑体验。', tags: ['偏好', '表格编辑', '编辑体验'] })
+  store.addFact({ fact: '用户特别在意 SilverBullet 的缩进层级是否清楚。', tags: ['偏好', '层级显示', '编辑体验'] })
+  const res = autoMergeFacts(store)
+  assert.equal(res.merged, 0)
+  assert.equal(store.facts.length, 2)
 })
