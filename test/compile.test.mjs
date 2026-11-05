@@ -102,6 +102,44 @@ test('经验候选可交给模型合并，重复候选被收敛', async (t) => {
   assert.equal(store.experienceCandidates.filter((c) => c.status === 'pending').length, 2)
 })
 
+test('整理候选时模型返回 Markdown 列表也能收敛，不再抛 JSON 解析错误', async (t) => {
+  const { store } = makeStore(t)
+  store.addExperienceCandidates([
+    { category: '记忆去重', content: '记忆条目重复时先合并同义事实，再入库。' },
+    { category: '记忆去重', content: '短小重复的记忆条目要先去重再入库。' },
+  ])
+  const llm = fakeLlm((prompt) => {
+    if (prompt.includes('经验整理器')) {
+      // 真实模型常见漂移：按输入形状输出列表，而不是 JSON。
+      return '- [记忆去重] 短小重复的记忆条目先合并同义事实再去重，然后入库。\n- [笔记备份] 笔记系统至少保留第二份自动备份。'
+    }
+    return '[]'
+  })
+  const compiler = createCompiler({ store, llm, logger: { log() {}, warn() {}, error() {} } })
+  const result = await compiler.consolidateExperience()
+  assert.equal(result.ok, true)
+  assert.equal(result.after, 2)
+  const pending = store.experienceCandidates.filter((c) => c.status === 'pending')
+  assert.equal(pending.length, 2)
+  assert.ok(pending.some((c) => c.category === '记忆去重' && /先合并同义事实/.test(c.content)))
+  assert.ok(pending.some((c) => c.category === '笔记备份'))
+})
+
+test('整理候选解析失败时不动候选库', async (t) => {
+  const { store } = makeStore(t)
+  store.addExperienceCandidates([
+    { category: '逐项验证', content: '一次性加多项改动容易白屏，回滚后要逐项验证。' },
+    { category: '笔记备份', content: '笔记系统要保留第二份备份。' },
+  ])
+  const before = store.experienceCandidates.filter((c) => c.status === 'pending').length
+  const llm = fakeLlm(() => '抱歉，我无法完成这个任务。')
+  const compiler = createCompiler({ store, llm, logger: { log() {}, warn() {}, error() {} } })
+  const result = await compiler.consolidateExperience()
+  assert.equal(result.ok, true)
+  assert.equal(result.kept, true)
+  assert.equal(store.experienceCandidates.filter((c) => c.status === 'pending').length, before)
+})
+
 test('编译失败：不标记线索、保留待编译、记录错误', async (t) => {
   const dir = makeTmp(t, 'compile-fail-')
   const store = new Store({ dataDir: dir, logger: { log() {}, warn() {}, error() {} } })
