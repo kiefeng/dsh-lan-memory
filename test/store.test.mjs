@@ -203,3 +203,56 @@ test('事实没有 time 时用写入日期补全', () => {
   assert.equal(facts[0].time, '2026-10-23')
   assert.equal(facts[1].time, '2026-11-04T09:30')
 })
+
+test('同主题近似改写原地更新，不产生重复条目', (t) => {
+  const { store } = tmpStore(t)
+  store.init()
+  const first = store.appendFacts([{ fact: '用户有一台 4G 内存的老笔记本', tags: ['设备', '硬件'] }])[0]
+  assert.ok(first)
+  const added = store.appendFacts([{ fact: '用户有一台 4G 内存的老华硕笔记本', tags: ['设备', '硬件'] }])
+  assert.equal(added.length, 0, '近似改写不应新增')
+  assert.equal(store.facts.length, 1)
+  assert.ok(store.facts[0].fact.includes('华硕'))
+  assert.equal(store.facts[0].id, first.id, '保持原 id，视为更新')
+  // 只有数字不同（编号/数量）的不能合并
+  store.appendFacts([{ fact: '用户有 3 台设备', tags: ['设备'] }])
+  store.appendFacts([{ fact: '用户有 4 台设备', tags: ['设备'] }])
+  assert.equal(store.facts.length, 3)
+})
+
+test('超龄事实归档到冷存储，索引按月生成，撤销能恢复', (t) => {
+  const { store } = tmpStore(t)
+  store.init()
+  const old = store.appendFacts([{ fact: '用户关注 2024 年的旧项目', tags: ['历史'] }])[0]
+  old.time = '2024-01-01'
+  old.updated_at = '2024-01-01T00:00:00Z'
+  store.saveFacts()
+  store.appendFacts([{ fact: '用户最近在忙 ESMO 2026', tags: ['近期'] }])
+  const r = store.archiveFacts({ beforeDays: 365 })
+  assert.equal(r.archived, 1)
+  assert.equal(store.facts.length, 1)
+  assert.equal(store.archivedFacts.length, 1)
+  assert.equal(store.archiveIndex.length, 1)
+  assert.equal(store.archiveIndex[0].month, '2024-01')
+  assert.equal(store.archiveIndex[0].count, 1)
+  store.undoLast()
+  assert.equal(store.facts.length, 2)
+  assert.equal(store.archivedFacts.length, 0)
+})
+
+test('旧会话摘要按月压缩成大纲，只保留最近 N 份', (t) => {
+  const { store } = tmpStore(t)
+  store.init()
+  const now = Date.now()
+  for (let i = 0; i < 40; i++) {
+    const lastTs = i >= 10 ? now - 200 * 86400000 : now - i * 1000
+    store.saveSummary('s' + i, '会话摘要 ' + i, { lastTs })
+  }
+  const r = store.compactSummaries({ keep: 30, olderThanDays: 90, now })
+  assert.ok(r.compacted >= 10, '应压缩掉超过 90 天的旧摘要')
+  assert.ok(Object.keys(store.summaryMonths).length >= 1)
+  assert.ok(Object.keys(store.summaries).length <= 30)
+  // 大纲里保留旧内容线索
+  const monthText = Object.values(store.summaryMonths).join(' ')
+  assert.ok(monthText.includes('会话摘要 0') || monthText.includes('会话摘要 39'))
+})

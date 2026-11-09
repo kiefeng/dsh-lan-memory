@@ -230,8 +230,11 @@ test('删除手动记忆时同名自动事实写墓碑，避免编译复活', as
 
 test('事实合并预览与确认写入', async (t) => {
   const { base, store } = await setup(t)
-  store.addFact({ fact: '用户喜欢深海潜水并观察鲸鱼的声音和动作', tags: ['偏好'] })
-  store.addFact({ fact: '用户喜欢深海潜水并观察鲸鱼的声音和动向', tags: ['兴趣'] })
+  // appendFacts 会在入库时合并近似改写，这里用 saveFacts 造两条待手动合并的事实。
+  store.saveFacts([
+    { id: 'f1', fact: '用户喜欢深海潜水并观察鲸鱼的声音和动作', tags: ['偏好'] },
+    { id: 'f2', fact: '用户喜欢深海潜水并观察鲸鱼的声音和动向', tags: ['兴趣'] },
+  ])
   let state = await (await fetch(base + '/lan-memory/api/state')).json()
   const preview = await post(base, '/lan-memory/api/facts', { action: 'merge-preview', ifMatch: state.etag }, { origin: base })
   assert.equal(preview.status, 200)

@@ -30,8 +30,11 @@ test('精确重复与近似重复会被识别为合并动作', (t) => {
 
 test('事实近似重复可预览、合并并撤销', (t) => {
   const { store } = setup(t)
-  store.addFact({ fact: '用户喜欢深海潜水并观察鲸鱼的声音和动作', tags: ['偏好'] })
-  store.addFact({ fact: '用户喜欢深海潜水并观察鲸鱼的声音和动向', tags: ['兴趣'] })
+  // 用 saveFacts 直接落库：appendFacts 现在会把近似改写原地合并，这里测的是手动预览/合并路径。
+  store.saveFacts([
+    { id: 'f1', fact: '用户喜欢深海潜水并观察鲸鱼的声音和动作', tags: ['偏好'] },
+    { id: 'f2', fact: '用户喜欢深海潜水并观察鲸鱼的声音和动向', tags: ['兴趣'] },
+  ])
   const clusters = planFactClusters(store.facts)
   assert.equal(clusters.length, 1)
   assert.equal(clusters[0].ids.length, 2)
@@ -121,12 +124,15 @@ test('过期条目只提示不自动删除', (t) => {
 test('中文改写靠标签重叠抓重复，不再只认字符串相似度', (t) => {
   const { store } = setup(t)
   // 这两条字符串相似度只有 0.64，旧阈值 0.85 抓不到，但标签完全一致。
-  store.addFact({ fact: '用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] })
-  store.addFact({ fact: '用户的 Linux 用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] })
-  // 华硕这两条相似度 0.5：能进预览，但不够高置信，不该自动合并。
-  store.addFact({ fact: '用户使用一台较老的华硕笔记本，配置为4G内存和5400转机械硬盘。', tags: ['设备', '硬件', '笔记本'] })
-  store.addFact({ fact: '用户有一台老华硕笔记本，配置为4G内存和机械硬盘。', tags: ['设备', '硬件', '笔记本'] })
-  store.addFact({ fact: '用户对 Arch Linux 及 Omarchy 的安装与使用有兴趣。', tags: ['兴趣', 'Linux'] })
+  // 用 saveFacts 直接落库：appendFacts 现在会在入库时就把近似改写合并掉。
+  store.saveFacts([
+    { id: 'f1', fact: '用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] },
+    { id: 'f2', fact: '用户的 Linux 用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] },
+    // 华硕这两条相似度 0.5：能进预览，但不够高置信，不该自动合并。
+    { id: 'f3', fact: '用户使用一台较老的华硕笔记本，配置为4G内存和5400转机械硬盘。', tags: ['设备', '硬件', '笔记本'] },
+    { id: 'f4', fact: '用户有一台老华硕笔记本，配置为4G内存和机械硬盘。', tags: ['设备', '硬件', '笔记本'] },
+    { id: 'f5', fact: '用户对 Arch Linux 及 Omarchy 的安装与使用有兴趣。', tags: ['兴趣', 'Linux'] },
+  ])
   const sig = factPairSignals(store.facts[0], store.facts[1])
   assert.ok(sig.sim < 0.85, '这对的字符串相似度应低于旧阈值')
   const clusters = planFactClusters(store.facts)
@@ -139,8 +145,10 @@ test('中文改写靠标签重叠抓重复，不再只认字符串相似度', (t
 
 test('高置信重复事实自动合并，写墓碑并可撤销', (t) => {
   const { store } = setup(t)
-  store.addFact({ fact: '用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] })
-  store.addFact({ fact: '用户的 Linux 用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] })
+  store.saveFacts([
+    { id: 'f1', fact: '用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] },
+    { id: 'f2', fact: '用户的 Linux 用户名是 kieran，主机名是 kieran-om。', tags: ['身份', '用户名', '主机名'] },
+  ])
   const res = autoMergeFacts(store)
   assert.ok(res.merged >= 2)
   assert.equal(store.facts.length, 1)

@@ -78,7 +78,7 @@ MCP 桥接。捕获不花模型调用；摘要与事实抽取用你在设置页�
 - **摘要 → 事实 → 画像**：滚动摘要 3–6 句（≤300 字），再从摘要抽原子事实；摘要失败退回原始 journal。
 - **每日边界**：跨天把旧 `today` 沉淀进 `week`，再清空 `today`；不额外调模型。
 - **事实墓碑**：删除的自动事实不会被下一次编译按相同文本写回；手动重新添加可解除。
-- **事实去重**：编译成功后自动合并高置信重复事实（几乎同句，或标签一致且相似度够高），写 undo 快照可整组回滚；其余候选进设置页「合并相似事实」，支持「全部合并」。判据是字符串相似度 + 标签重叠，不再只认完全相同的文本。
+- **事实去重**：编译成功后自动合并高置信重复事实（几乎同句，或标签一致且相似度够高），写 undo 快照可整组回滚；其余候选进设置页「合并相似事实」，支持「全部合并」。判据是字符串相似度 + 标签重叠，不再只认完全相同的文本。新事实入库时，与已有条目属于同一件事的改写会原地更新（旧文本进墓碑），只有数字/编号不同的不合并。
 - **事实有时间锚**：每条事实都带 `time`（模型没给时用写入日期兜底），设置页显示日期，能判断哪条更新。
 - **兜底不污染画像**：模型抽取失败时用本地规则切片兜底，标 `source: fallback` 留在事实库（不丢线索），但不参与画像，等下次成功编译或人工修正。
 - **经验候选**：编译可提出 0–1 条可复用方法；接受后才写入 `experience.jsonl`，忽略则保留为 dismissed，不再反复出现。多条候选可用「整理候选」交给模型合并去重；接受 JSON 数组或 `- [分类] 内容` 列表两种输出，解析不出时保持候选原样。积压 ≥5 条时会自动归并一次（每 20 小时最多一次）。
@@ -117,9 +117,12 @@ lan-memory/
 ├── memory.jsonl            # 手动记忆
 ├── experience.jsonl        # 经验库
 ├── facts.jsonl             # 自动抽取的原子事实
+├── facts-archive.jsonl     # 冷存储：超龄事实（默认不参与召回）
+├── archive-index.jsonl     # 冷存储：按月索引（月份/条数/标签/样例）
 ├── fact-tombstones.json    # 已删除事实的规范化文本墓碑
 ├── experience-candidates.json # 编译产出的经验候选（待接受/已忽略）
-├── summaries.json          # 每会话滚动摘要
+├── summaries.json          # 每会话滚动摘要（最近 30 份）
+├── summary-months.json     # 更早摘要的月度大纲
 ├── memory.md               # 四段编译画像（可手改）
 ├── facts.md / today.md / week.md / longterm.md
 ├── mood.jsonl              # 最近 200 条状态池
@@ -165,6 +168,7 @@ lan-memory/
 - 事实墓碑：删除自动事实会写 `fact-tombstones.json`；编译跳过同文本。
 - 事实合并：高置信簇由编译自动合并；低置信簇只在设置页预览，确认后保留最长一条并给其余写墓碑，可撤销。
 - 事实时间：抽取时把模型给的 `time` 或记录日期写进事实；历史条目读取时用 `created_at` 补齐。
+- 冷存储：超过 `archiveAfterDays`（默认 365 天）的事实移到 `facts-archive.jsonl`，按月份留一行索引；默认召回不查，`lan_recall` 带 `includeArchive` 才深挖。会话摘要保留最近 30 份，更早的按月压成大纲。不删除数据，每月检查一次，可撤销。
 - 兜底事实：抽取失败时本地切片标 `source: fallback`，入库但不进画像。
 - 经验候选：编译产出的候选不自动写库；接受才进入经验库，忽略会标记 dismissed；积压 ≥5 条自动归并一次。
 - 手动记忆：用户说“记住”只写 `memory.jsonl`，不复制成 facts；通过 `lan:manual` 每轮注入。
@@ -192,14 +196,14 @@ lan-memory/
 `maxFacts`、`maxMemoryBytes`、`maxManualBytes`、
 `maxPinnedBytes`、`maxRecallBytes`、`maxIndexBytes`、`maxMoodBytes`、`maxEntryChars`、
 `maxPinnedEntryChars`、`journalPendingDays`、`journalPendingMax`、`maxMemory`、`maxExperience`、
-`journalRetentionDays`、`journalMaxPerDay`。
+`journalRetentionDays`、`journalMaxPerDay`、`archiveAfterDays`、`archiveEveryDays`、`summaryKeep`、`summaryCompactDays`。
 
 ## 排查
 
 - `GET /lan-memory/api/health`：工具/section/context 数量、捕获事件数、迁移结果、最近错误。
 - 设置页看不到：确认 DSH 版本满足 `engines.dsh`、Desktop 是否重启过。
 - 旧面板书签已失效：`/lan-memory/` 返回 404，管理统一走设置页。
-- 数据目录被另一个进程占用时插件进入只读模式（`.lock`），关闭多开的 DSH 后重启即可。
+- 数据目录被另一个进程占用时插件进入只读模式（`.lock`）。锁带 60 秒心跳：心跳超过 5 分钟或进程已不存在会被自动接管；只读时每次写前也会重试取锁。`lan_status` 与设置页会显示占用 pid，确实多开时才需要关掉占用实例。
 
 ## 开发
 
@@ -212,9 +216,11 @@ node test/capture.test.mjs
 node test/http.test.mjs
 node test/apply.test.mjs
 node test/compile.test.mjs
+node test/lock.test.mjs
+node test/recall.test.mjs
 ```
 
-81 项测试，覆盖自动编译、摘要、每日边界、事实时间锚、事实墓碑/去重合并、四层检索无损 JSON、经验候选整理容错、设置页 API 与 HTTP 安全。
+93 项测试，覆盖自动编译、摘要、每日边界、事实时间锚、事实墓碑/去重合并、规则锁与心跳接管、冷存储归档与摘要大纲、四层检索无损 JSON、召回簇内去重与时间衰减、弱命中过滤、经验候选整理容错、设置页 API 与 HTTP 安全。
 
 ## License
 
