@@ -201,6 +201,25 @@ test('mood 接口兼容只有一句 Vibe 的裸文本', async (t) => {
   assert.equal(data.mood.text, '海面稳住，编译管线接上了。')
 })
 
+test('状态池实用栏：疑点/待办/关联按需解析', async (t) => {
+  const { base, store } = await setup(t)
+  store.recordMood(
+    'Vibe: 潮水退了\n潜台词: 这版应该能过，但没底。\n疑点: 旧锁会不会又卡住\n待办: 重启后看 lan_status 是不是 2.15\n关联: 上次你提过 0.2.2 升级前要先冒烟',
+    Date.now(),
+    { session: 's3', turn: 4, seq: 11 },
+  )
+  const data = await (await fetch(base + '/lan-memory/api/mood?session=s3&turn=4')).json()
+  assert.equal(data.mood.vibe, '潮水退了')
+  assert.ok(data.mood.subtext.includes('没底'))
+  assert.equal(data.mood.suspicion, '旧锁会不会又卡住')
+  assert.ok(data.mood.todo.includes('lan_status'))
+  assert.ok(data.mood.link.includes('0.2.2'))
+  // state 里也带解析结果，设置页能直接展示
+  const state = await (await fetch(base + '/lan-memory/api/state')).json()
+  const last = state.moods[state.moods.length - 1]
+  assert.equal(last.todo.includes('lan_status'), true)
+})
+
 test('settings 允许修改编译相关上限', async (t) => {
   const { base, store } = await setup(t)
   const state = await (await fetch(base + '/lan-memory/api/state')).json()

@@ -19,7 +19,7 @@ No Python service, no vector database, no API key. Everything is stored as Markd
 
 ![Mood status card rendered after a reply](docs/images/mood-card.png)
 
-*The mood status card: Vibe, Sparks, Reflections and Will, rendered locally from the turn’s `<mood>` block.*
+*The mood status card: Vibe, subtext, and an optional practical field (doubt / todo / recall), rendered locally from the turn’s `<mood>` block.*
 
 ![Native DSH settings page](docs/images/settings-preview.png)
 
@@ -86,7 +86,7 @@ MCP 桥接。捕获不花模型调用；摘要与事实抽取用你在设置页�
 - **零 LLM 捕获**：`session/event` → 每轮一条 `journal/YYYY-MM-DD.jsonl`，只做机械去噪；捕获本身不调模型。
 - **一个管理面**：DSH 设置页「澜记忆」，标签为 概览 / 记忆 / 经验 / 收件箱 / 人格 / 维护；没有独立网页面板。
 - **可编辑**：画像、自动事实、手动记忆、常驻、经验都能直接改；写前自动备份。
-- **状态池卡片**：每条回复下方把本轮 `<mood>` 渲染成澜主题卡片（🐋 Vibe / 灵感 / 反思 / 意志），原文自动隐去。
+- **状态池卡片**：每条回复下方把本轮 `<mood>` 渲染成澜主题卡片。基础是 Vibe + 潜台词，再按场景带一个实用栏（疑点 / 待办 / 关联），有值才显示；原文自动隐去。
 - **写盘护栏**：原子写 + 上一版 `.bak` + 整理/删除前快照（manifest.sha256）+ 单写者锁。
 - **注入卫生**：`section()` 放常量、`context()` 放读盘内容；全部 `interpolate:false`；字节预算按 UTF-8 实算。
 - **兼容性**：`engines.dsh: ^0.2.1-rc.2`；不 import 任何 DSH 包。
@@ -220,7 +220,7 @@ node test/lock.test.mjs
 node test/recall.test.mjs
 ```
 
-93 项测试，覆盖自动编译、摘要、每日边界、事实时间锚、事实墓碑/去重合并、规则锁与心跳接管、冷存储归档与摘要大纲、四层检索无损 JSON、召回簇内去重与时间衰减、弱命中过滤、经验候选整理容错、设置页 API 与 HTTP 安全。
+94 项测试，覆盖自动编译、摘要、每日边界、事实时间锚、事实墓碑/去重合并、规则锁与心跳接管、冷存储归档与摘要大纲、四层检索无损 JSON、召回簇内去重与时间衰减、弱命中过滤、状态池实用栏解析、经验候选整理容错、设置页 API 与 HTTP 安全。
 
 ## License
 
